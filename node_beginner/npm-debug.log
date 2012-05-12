@@ -1,0 +1,45 @@
+info it worked if it ends with ok
+verbose cli [ '/home/y-kamiya/nvm/v0.7.8/bin/node',
+verbose cli   '/home/y-kamiya/nvm/v0.7.8/bin/npm',
+verbose cli   'install',
+verbose cli   'formidable' ]
+info using npm@1.1.18
+info using node@v0.7.8
+verbose config file /home/y-kamiya/.npmrc
+verbose config file /home/y-kamiya/nvm/v0.7.8/etc/npmrc
+verbose config file /home/y-kamiya/nvm/v0.7.8/lib/node_modules/npm/npmrc
+verbose cache add [ 'formidable', null ]
+silly cache add: name, spec, args [ undefined, 'formidable', [ 'formidable', null ] ]
+verbose parsed url { pathname: 'formidable',
+verbose parsed url   path: 'formidable',
+verbose parsed url   href: 'formidable' }
+verbose addNamed [ 'formidable', '' ]
+verbose addNamed [ null, '' ]
+silly name, range, hasData [ 'formidable', '', false ]
+verbose raw, before any munging formidable
+verbose url resolving [ 'https://registry.npmjs.org/', './formidable' ]
+verbose url resolved https://registry.npmjs.org/formidable
+http GET https://registry.npmjs.org/formidable
+ERR! Error: SSL Error: CERT_NOT_YET_VALID
+ERR!     at ClientRequest.<anonymous> (/home/y-kamiya/nvm/v0.7.8/lib/node_modules/npm/node_modules/request/main.js:483:26)
+ERR!     at ClientRequest.emit (events.js:87:17)
+ERR!     at HTTPParser.onIncoming (http.js:1419:11)
+ERR!     at HTTPParser.onHeadersComplete (http.js:115:25)
+ERR!     at CleartextStream.ondata (http.js:1290:24)
+ERR!     at CleartextStream._push (tls.js:396:27)
+ERR!     at SecurePair.cycle (tls.js:752:20)
+ERR!     at EncryptedStream.write (tls.js:131:13)
+ERR!     at Socket.ondata (stream.js:38:26)
+ERR!     at Socket.emit (events.js:87:17)
+ERR! You may report this log at:
+ERR!     <http://github.com/isaacs/npm/issues>
+ERR! or email it to:
+ERR!     <npm-@googlegroups.com>
+ERR! 
+ERR! System Linux 2.6.32-36-server
+ERR! command "/home/y-kamiya/nvm/v0.7.8/bin/node" "/home/y-kamiya/nvm/v0.7.8/bin/npm" "install" "formidable"
+ERR! cwd /home/y-kamiya/node/test/node_beginner
+ERR! node -v v0.7.8
+ERR! npm -v 1.1.18
+ERR! message SSL Error: CERT_NOT_YET_VALID
+verbose exit [ 1, true ]
