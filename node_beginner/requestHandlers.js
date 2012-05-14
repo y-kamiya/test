@@ -1,5 +1,6 @@
 var querystring = require('querystring'),
     fs = require('fs'),
+    url = require('url'),
     formidable = require('formidable');
 
 function start(req, res) {
@@ -90,8 +91,18 @@ function show(req, res) {
     });
 }
 
+function clientTest(req, res) {
+    console.log('clientTest');
+
+    req.setEncoding('utf8');
+    req.on('data', function(chunk) {
+        console.log(chunk);
+        res.write('Response from server');
+    });
+}
 
 exports.start = start;
 exports.upload = upload;
 exports.uploadFile = uploadFile;
 exports.show = show;
+exports.clientTest = clientTest;
