@@ -3,6 +3,7 @@ import Data.Conduit
 import Data.Conduit.Binary (sinkFile)
 import System.Environment
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Resource (runResourceT)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C8
 
@@ -33,4 +34,8 @@ effiecientHttp = do
             manager <- liftIO $ newManager conduitManagerSettings
             req <- liftIO $ parseUrl "http://www.yesodweb.com/book/http-conduit"
             res <- http req manager
-            print $ responseBody res 
+            responseBody res $$+- sinkFile "foo.txt"
+
+            let req2 = req {  method = L.toStrict $ C8.pack "POST", redirectCount = 0 , checkStatus = \_ _ _ -> Nothing }
+            res2 <- http req2 manager
+            responseBody res2 $$+- sinkFile "post-foo.txt"
