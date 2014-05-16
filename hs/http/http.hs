@@ -17,7 +17,7 @@ printResponseHeader urls = do
             case parseUrl urlString of
                 Nothing -> putStrLn "invalid url"
                 Just req -> withManager $ \manager -> do
-                    let reqHead = req { method = L.toStrict $ C8.pack "HEAD" }
+                    let reqHead = req { method =  C8.pack "HEAD" }
                     res <- http req manager
                     liftIO $ do
                         print $ responseStatus res
