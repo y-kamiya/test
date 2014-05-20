@@ -1,5 +1,5 @@
 main :: IO ()
-main = fizzBuzz 0
+main = fizzbuzz 0
         
 -- normal
 fizzBuzz :: Int -> IO ()
@@ -22,3 +22,28 @@ fizzBuzz' = mapM_ putStrLn $ tail $ f (take 100 $ concat $ repeat list) ["0"]
                     "a" -> f (tail ss) (as ++ [show (length as)])
                     _   -> f (tail ss) (as ++ [head ss])
     
+
+-- created by takebe
+data Nat = Zero | Succ Nat
+         
+isThreeMulti Zero = True
+isThreeMulti (Succ (Succ (Succ x))) = isThreeMulti x
+isThreeMulti _ = False
+
+isFiveMulti Zero = True
+isFiveMulti (Succ (Succ (Succ (Succ (Succ x))))) = isFiveMulti x
+isFiveMulti _ = False
+
+showNat' (n:ns) Zero = n
+showNat' (n:ns) (Succ x) = showNat' ns x
+
+showNat = show . showNat' [0..]
+
+fizzbuzz'' x | isThreeMulti x && isFiveMulti x = "FizzBuzz"
+             | isThreeMulti x = "Fizz"
+             | isFiveMulti x = "Buzz"
+             | otherwise = showNat x
+             
+
+main'' :: IO ()
+main'' = print $ map fizzbuzz'' $ take 100 (iterate Succ (Succ Zero))
