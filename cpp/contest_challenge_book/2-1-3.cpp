@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <algorithm>
+#include <queue>
 
 using namespace std;
 
@@ -9,7 +10,7 @@ const int n = 5;
 const int m = 6;
 const int INF = 100000000;
 char maze[n][m+1] = {
-    "#S####",
+    "##S###",
     ".....#",
     ".##.##",
     "#....#",
@@ -17,38 +18,62 @@ char maze[n][m+1] = {
 };
 
 int d[n][m+1];
-int dx[4] = {1,0,-1,0}; dy[4] = {0,1,0,-1};
+int dx[4] = {1,0,-1,0}, dy[4] = {0,1,0,-1};
 
+P getStartOrGoal(char c) {
+    for (int i = 0; i < n; i++) { 
+        for (int j = 0; j < n; j++) { 
+            if (maze[i][j] == c) return P(i, j);
+        }
+    }
+    return make_pair(0,0);
+}
 
-void dfs(int x, int y) {
-    field[x][y] = '.';
+bool inMaze(P p) {
+    int x = p.first, y = p.second;
+    
+    if (0 <= x && x < n && 0 <= y && y < m) return true;
+    
+    return false;
+}
 
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dy = -1; dy <= 1; dy++) {
-            int nx = x + dx, ny = y + dy;
-            if (0 <= nx && nx < n && 
-                0 <= ny && ny < m && 
-                field[nx][ny] == 'W') {
-
-                dfs(nx, ny);
+int bfs() {
+    for (int i = 0; i < n; i++) { 
+        for (int j = 0; j < n; j++) { 
+            d[i][j] = INF;
+        }
+    }
+    
+    P s = getStartOrGoal('S');
+    P g = getStartOrGoal('G');
+    
+    queue<P> que;
+    que.push(s);
+    d[s.first][s.second] = 0;
+    
+    while (que.size()) {
+        P p = que.front();
+        que.pop();
+        
+        if (p == g) break;
+        
+        for (int i = 0; i < 4; i++) {
+            int nx = p.first + dx[i];
+            int ny = p.second + dy[i];
+            P n  = P(nx, ny);
+            
+            if (inMaze(p) && maze[nx][ny] != '#' && d[nx][ny] == INF) {
+                que.push(n);
+                d[nx][ny] = d[p.first][p.second] + 1;
             }
         }
     }
-    return;
-
+    return d[g.first][g.second];
 }
 
 int main() {
-    int res = 0;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < m; j++) {
-            if (field[i][j] == 'W') {
-                dfs(i, j);
-                res++;
-            }
-        }
-    }
-    printf("%d\n", res);
+    int ans = bfs();
+    printf("%d\n", ans);
     return 0;
 }
 
