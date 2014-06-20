@@ -22,16 +22,22 @@ Point dir[4] = {{-1,0}, {0,1}, {1,0}, {0,-1}};
 /************************ settings *****************************/
 #define DEBUG 1
 
-#define N 8
-#define M 8
+#define N 9
+#define M 9
 
 #if N == 4
-#define NUM 3
+#define NUM 2
 int map[N][M] = {
+    /*
     {1,0,0,0},
     {0,0,3,0},
     {0,2,0,2},
     {0,1,0,3},
+    */
+    {0,0,0,2},
+    {0,1,0,0},
+    {0,0,2,0},
+    {1,0,0,0},
 };
 
 #elif N == 7
@@ -99,7 +105,7 @@ bool isStart(int num, Point p) {
     return p.x == start[num-1].x && p.y == start[num-1].y;
 }
 bool isStart(Point p) {
-    for (int i = 0; i < NUM; i++) {
+    for (int i = 1; i <= NUM; i++) {
         if (isStart(i, p)) return true;
     }
     return false;
@@ -108,7 +114,7 @@ bool isGoal(int num, Point p) {
     return p.x == goal[num-1].x && p.y == goal[num-1].y;
 }
 bool isGoal(Point p) {
-    for (int i = 0; i < NUM; i++) {
+    for (int i = 1; i <= NUM; i++) {
         if (isGoal(i, p)) return true;
     }
     return false;
@@ -201,10 +207,19 @@ bool zeroIsNotExist() {
     return true;
 }
 
-bool hasOrphanPoint() {
+bool isNext(Point a, Point b) {
+    int dx = a.x - b.x;
+    int dy = a.y - b.y;
+    return dx*dx + dy*dy == 1;
+
+}
+
+bool hasOrphanPoint(Point current) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < M; j++) {
-            if (map[i][j] == 0 && mapN[i][j] <= 1) return true;
+            Point p = {i, j};
+            //fs << "isNext(" << isNext(p,current) << "):: " << i << " " << j << " to " << current.x << " " << current.y << endl;
+            if (map[i][j] == 0 && mapN[i][j] <= 1 && !isNext(p, current)) return true;
         }
     }
     return false;
@@ -229,6 +244,12 @@ void updateMapN(Point p, bool isRestore) {
 
 }
 
+void back(int num, Point p) {
+    if (!isStart(num, p) && !isGoal(num, p)) {
+        setNumToMap(0, p);
+        updateMapN(p, true);
+    }
+}
 
 void find(int num, Point current) {
 #if DEBUG == 1
@@ -236,19 +257,26 @@ void find(int num, Point current) {
 #endif
     updateMapN(current, false);
     setNumToMap(num, current);
+    /*
+    printMap(map, 1, "map");
+    printMap(mapN, 1, "mapN");
+    */
+
+    // check orphan point
+    if (hasOrphanPoint(current)) {
+        fs << "back(orphan)" << endl;
+        back(num, current);
+        return;
+    }
+
 
     if (isGoal(num, current)) {
         printMap(map, 1, "map");
         printMap(mapN, 1, "mapN");
 
         // finish checking all NUM
-        if (num == NUM && zeroIsNotExist()) {
-            printMap(map, 2, "map");
-            return;
-        }
-
-        // check orphan point
-        if (hasOrphanPoint()) {
+        if (num == NUM) {
+            if (zeroIsNotExist()) printMap(map, 2, "map");
             return;
         }
 
@@ -268,10 +296,8 @@ void find(int num, Point current) {
             find(num, p);
         }
     }
-    if (!isStart(num, current) && !isGoal(num, current)) {
-        setNumToMap(0, current);
-        updateMapN(current, true);
-    }
+    fs << "back(no more dir)" << endl;
+    back(num, current);
     
 }
 
