@@ -78,6 +78,41 @@ Point start[NUM];
 Point goal[NUM];
 /************************ settings *****************************/
 
+// map to represent number of empty point in neighbers 
+int mapN[N][M];
+
+
+Point pointSum(Point a, Point b) {
+    Point p = {a.x + b.x, a.y + b.y};
+    return p;
+}
+
+bool inMap(Point p) {
+    return 0 <= p.x && p.x < N && 0 <= p.y && p.y < M;
+}
+
+bool isEmpty(Point p) {
+    return map[p.x][p.y] == 0;
+}
+
+bool isStart(int num, Point p) {
+    return p.x == start[num-1].x && p.y == start[num-1].y;
+}
+bool isStart(Point p) {
+    for (int i = 0; i < NUM; i++) {
+        if (isStart(i, p)) return true;
+    }
+    return false;
+}
+bool isGoal(int num, Point p) {
+    return p.x == goal[num-1].x && p.y == goal[num-1].y;
+}
+bool isGoal(Point p) {
+    for (int i = 0; i < NUM; i++) {
+        if (isGoal(i, p)) return true;
+    }
+    return false;
+}
 
 
 void setStartAndGoal() {
@@ -103,11 +138,37 @@ void setStartAndGoal() {
 #endif
 }
 
-void printMap(int p[][N], int output) {
+void setMapN() {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < M; j++) {
-            if (output == 1 || output == 3) { fs << map[i][j] << " "; }
-            if (output == 2 || output == 3) { printf("%d ", map[i][j]); }
+            Point p = {i, j};
+            int emptyCount = 0;
+            for (int k = 0; k < DIR; k++) {
+                Point pp = pointSum(p, dir[k]);
+                if (inMap(pp) && (map[pp.x][pp.y] == 0 || isStart(pp) || isGoal(pp))) emptyCount++;
+            }
+            mapN[i][j] = emptyCount;
+        }
+    }
+    cout << endl << "mapN" << endl;
+    fs << endl << "mapN" << endl;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            cout << mapN[i][j] << " ";
+            fs << mapN[i][j] << " ";
+        }
+        cout << endl;
+        fs << endl;
+    }
+}
+
+void printMap(int p[][N], int output, string label) {
+    if (output == 1 || output == 3) { fs << endl << label << endl; }
+    if (output == 2 || output == 3) { cout << endl << label << endl; }
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            if (output == 1 || output == 3) { fs << p[i][j] << " "; }
+            if (output == 2 || output == 3) { printf("%d ", p[i][j]); }
         }
         if (output == 1 || output == 3) { fs << endl; }
         if (output == 2 || output == 3) { printf("\n"); }
@@ -116,26 +177,6 @@ void printMap(int p[][N], int output) {
 
 void logPoint(int num, Point p) {
     fs << "num:" << num << "\tcurrent: (" << p.x << "," << p.y << ")" << endl;
-}
-
-Point pointSum(Point a, Point b) {
-    Point p = {a.x + b.x, a.y + b.y};
-    return p;
-}
-
-bool inMap(Point p) {
-    return 0 <= p.x && p.x < N && 0 <= p.y && p.y < M;
-}
-
-bool isEmpty(Point p) {
-    return map[p.x][p.y] == 0;
-}
-
-bool isStart(int num, Point p) {
-    return p.x == start[num-1].x && p.y == start[num-1].y;
-}
-bool isGoal(int num, Point p) {
-    return p.x == goal[num-1].x && p.y == goal[num-1].y;
 }
 
 bool isVerbose(int num, Point p) {
@@ -160,26 +201,63 @@ bool zeroIsNotExist() {
     return true;
 }
 
+bool hasOrphanPoint() {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            if (map[i][j] == 0 && mapN[i][j] <= 1) return true;
+        }
+    }
+    return false;
+}
+
 void setNumToMap(int num, Point p) {
     map[p.x][p.y] = num;
 }
-    
+
+void updateMapN(Point p, bool isRestore) {
+    if (map[p.x][p.y] != 0) return;
+    for (int i = 0; i < DIR; i++) {
+        Point pp = pointSum(p, dir[i]);
+        if (inMap(pp)) {
+            if (isRestore) {
+                mapN[pp.x][pp.y]++;
+            } else {
+                mapN[pp.x][pp.y]--;
+            }
+        }
+    }
+
+}
+
 
 void find(int num, Point current) {
 #if DEBUG == 1
     logPoint(num, current);
 #endif
+    updateMapN(current, false);
     setNumToMap(num, current);
+
     if (isGoal(num, current)) {
-        printMap(map, 1);
+        printMap(map, 1, "map");
+        printMap(mapN, 1, "mapN");
+
+        // finish checking all NUM
         if (num == NUM && zeroIsNotExist()) {
-            printMap(map, 2);
+            printMap(map, 2, "map");
             return;
         }
+
+        // check orphan point
+        if (hasOrphanPoint()) {
+            return;
+        }
+
         int nextNum = ++num;
         find(nextNum, start[nextNum-1]);
         return;
     }
+    
+    // check next point
     for (int i = 0; i < DIR; i++) {
         Point p = pointSum(current, dir[i]);
 #if DEBUG == 1
@@ -192,6 +270,7 @@ void find(int num, Point current) {
     }
     if (!isStart(num, current) && !isGoal(num, current)) {
         setNumToMap(0, current);
+        updateMapN(current, true);
     }
     
 }
@@ -218,13 +297,17 @@ int main() {
 
     clock_t starttime = clock();
     setStartAndGoal();
-    printMap(map, 3);
+    setMapN();
+
+    printMap(map, 3, "map");
     printf("=========================================\n");
     fs << "==========================================" << endl;
 
     find(1, start[0]);
+
     clock_t endtime = clock();
     cout << "time: " << (endtime - starttime) / 1000  << " [ms]" << endl;
+
     return 0;
 }
 
