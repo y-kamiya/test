@@ -1,13 +1,14 @@
 #include<cstdio>
 #include<iostream>
+#include<fstream>
 #include<string>
 
-#define N 4
-#define M 4
-#define NUM 3
+#define DEBUG 1
+
+#define N 7
+#define M 7
+#define NUM 4
 #define DIR 4
-
-
 
 using namespace std;
 
@@ -16,28 +17,46 @@ struct Point {
     int y;
 };
 
+ofstream fs("log");
+
 int map[N][M] = {
-    {1,0,0,0},
-    {0,0,3,0},
+    {0,0,0,0,0,0,2},
+    {0,0,0,0,0,0,0},
+    {0,0,3,0,0,0,0},
+    {2,0,0,0,1,0,0},
+    {0,0,0,0,0,0,0},
+    {3,4,0,0,0,4,0},
+    {1,0,0,0,0,0,0},
+};
+Point start[NUM] = {{3,4}, {0,6}, {2,2}, {5,1}};
+Point goal[NUM]  = {{6,0}, {3,0}, {5,0}, {5,5}};
+/*
+int map[N][M] = {
+    {0,0,0,0},
+    {0,1,3,0},
     {0,2,0,2},
     {0,1,0,3},
 };
-
-Point start[NUM] = {{0,0}, {2,1}, {1,2}};
+Point start[NUM] = {{1,1}, {2,1}, {1,2}};
 Point goal[NUM]  = {{3,1}, {2,3}, {3,3}};
+*/
+
+
 Point dir[4]     = {{-1,0}, {0,1}, {1,0}, {0,-1}};
 
-void printMap(int p[][N]) {
+void printMap(int p[][N], int output) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < M; j++) {
-            printf("%d ", map[i][j]);
+            if (output == 1 || output == 3) { fs << map[i][j] << " "; }
+            if (output == 2 || output == 3) { printf("%d ", map[i][j]); }
         }
-        printf("\n");
+        if (output == 1 || output == 3) { fs << endl; }
+        if (output == 2 || output == 3) { printf("\n"); }
     }
 }
 
-void printPoint(Point p) {
-    printf("current: (%d,%d)\n", p.x, p.y); 
+void logPoint(int num, Point p) {
+    fs << "num:" << num << "\tcurrent: (" << p.x << "," << p.y << ")" << endl;
 }
 
 Point pointSum(Point a, Point b) {
@@ -71,6 +90,16 @@ bool isVerbose(int num, Point p) {
     }
     return false;
 }
+bool zeroIsNotExist() {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            if (map[i][j] == 0) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
 
 void setNumToMap(int num, Point p) {
     map[p.x][p.y] = num;
@@ -78,11 +107,14 @@ void setNumToMap(int num, Point p) {
     
 
 void find(int num, Point current) {
-    printPoint(current);
+#ifdef DEBUG
+    logPoint(num, current);
+#endif
     setNumToMap(num, current);
     if (isGoal(num, current)) {
-        printMap(map);
-        if (num == NUM) {
+        printMap(map, 1);
+        if (num == NUM && zeroIsNotExist()) {
+            printMap(map, 2);
             return;
         }
         int nextNum = ++num;
@@ -91,7 +123,9 @@ void find(int num, Point current) {
     }
     for (int i = 0; i < DIR; i++) {
         Point p = pointSum(current, dir[i]);
-        cout << "num:" << num << "\tP(" << p.x << "," << p.y << ")\t" << isVerbose(num, p) << endl;
+#ifdef DEBUG
+        //cout << "num:" << num << "\tP(" << p.x << "," << p.y << ")\t" << isVerbose(num, p) << endl;
+#endif
         if (isVerbose(num, p)) continue;
         if (isGoal(num, p) || (inMap(p) && isEmpty(p))) {
             find(num, p);
@@ -122,8 +156,9 @@ void testIsVerbose() {
 
 int main() {
     //testIsVerbose();
-    printMap(map);
+    printMap(map, 3);
     printf("=========================================\n");
+    fs << "==========================================" << endl;
 
     find(1, start[0]);
     return 0;
