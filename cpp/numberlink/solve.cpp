@@ -64,7 +64,7 @@ bool isVerbose(int num, Point p) {
     int count = 0;
     for (int i = 0; i < DIR; i++) {
         Point pp = pointSum(p, dir[i]);
-        if (!isEmpty(pp) && map[pp.x][pp.y] == num) count++;
+        if (inMap(pp) && map[pp.x][pp.y] == num && !isGoal(num, pp)) count++;
     }
     if (2 <= count) {
         return true;
@@ -91,7 +91,8 @@ void find(int num, Point current) {
     }
     for (int i = 0; i < DIR; i++) {
         Point p = pointSum(current, dir[i]);
-        //if (isVerbose(num, p)) continue;
+        cout << "num:" << num << "\tP(" << p.x << "," << p.y << ")\t" << isVerbose(num, p) << endl;
+        if (isVerbose(num, p)) continue;
         if (isGoal(num, p) || (inMap(p) && isEmpty(p))) {
             find(num, p);
         }
