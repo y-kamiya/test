@@ -2,6 +2,7 @@
 #include<iostream>
 #include<fstream>
 #include<string>
+#include<ctime>
 
 using namespace std;
 
@@ -21,8 +22,8 @@ Point dir[4] = {{-1,0}, {0,1}, {1,0}, {0,-1}};
 /************************ settings *****************************/
 #define DEBUG 1
 
-#define N 7
-#define M 7
+#define N 8
+#define M 8
 
 #if N == 4
 #define NUM 3
@@ -43,6 +44,33 @@ int map[N][M] = {
     {0,0,0,0,0,0,0},
     {3,4,0,0,0,4,0},
     {1,0,0,0,0,0,0},
+};
+
+#elif N == 8
+#define NUM 4
+int map[N][M] = {
+    {0,0,0,0,0,0,0,4},
+    {0,1,0,0,0,0,0,0},
+    {0,0,0,0,0,0,4,0},
+    {0,0,0,0,0,0,0,0},
+    {0,3,0,0,0,0,0,0},
+    {0,0,0,0,0,0,2,0},
+    {0,0,3,0,0,0,0,0},
+    {1,0,0,0,0,0,0,2},
+};
+
+#elif N == 9
+#define NUM 4
+int map[N][M] = {
+    {0,0,0,0,0,0,0,0,3},
+    {0,0,0,0,0,0,0,0,1},
+    {0,0,0,0,2,0,0,0,0},
+    {0,0,0,0,3,0,0,0,0},
+    {0,0,0,0,2,0,0,0,0},
+    {0,0,0,0,0,4,0,0,0},
+    {0,4,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0},
+    {1,0,0,0,0,0,0,0,0},
 };
 #endif
 
@@ -187,12 +215,16 @@ void testIsVerbose() {
 
 int main() {
     //testIsVerbose();
+
+    clock_t starttime = clock();
     setStartAndGoal();
     printMap(map, 3);
     printf("=========================================\n");
     fs << "==========================================" << endl;
 
     find(1, start[0]);
+    clock_t endtime = clock();
+    cout << "time: " << (endtime - starttime) / 1000  << " [ms]" << endl;
     return 0;
 }
 
