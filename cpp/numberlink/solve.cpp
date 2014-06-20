@@ -21,6 +21,7 @@ Point dir[4] = {{-1,0}, {0,1}, {1,0}, {0,-1}};
 
 /************************ settings *****************************/
 #define DEBUG 1
+#define TEST 0
 
 #define N 9
 #define M 9
@@ -318,10 +319,7 @@ void testIsVerbose() {
     if (isVerbose(1, p) == false) { testPrint("isVerbose(1,p)", 1, p, map); }
 }
 
-int main() {
-    //testIsVerbose();
-
-    clock_t starttime = clock();
+void solve() {
     setStartAndGoal();
     setMapN();
 
@@ -330,7 +328,16 @@ int main() {
     fs << "==========================================" << endl;
 
     find(1, start[0]);
+}
 
+int main() {
+#if TEST == 1
+    testIsVerbose();
+    return 0; 
+#endif    
+
+    clock_t starttime = clock();
+    solve();
     clock_t endtime = clock();
     cout << "time: " << (endtime - starttime) / 1000  << " [ms]" << endl;
 
