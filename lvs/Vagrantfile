@@ -8,59 +8,130 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
   # please see the online documentation at vagrantup.com.
-    
-  config.vm.define :cli do |cli|
-    cli.vm.box = "ubuntu/trusty64"
-    cli.vm.network :private_network, ip: "192.168.0.100"
-    cli.vm.provider "virtualbox" do |vb|
-      vb.customize ["modifyvm", :id, "--memory", "256"]
+
+  (0..1).each do |i|
+    config.vm.define vm_name = "cli%d" % i do |cli|
+      cli.vm.hostname = vm_name
+      cli.vm.box = "ubuntu/trusty64"
+      cli.vm.network :private_network, ip: "192.168.0.#{100+i}"
+      cli.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--memory", "128"]
+      end
     end
-  end
-  config.vm.define :cli2 do |cli|
-    cli.vm.box = "ubuntu/trusty64"
-    cli.vm.network :private_network, ip: "192.168.0.101"
-    cli.vm.provider "virtualbox" do |vb|
-      vb.customize ["modifyvm", :id, "--memory", "256"]
-    end
-  end
-  config.vm.define :lb do |lb|
-    lb.vm.box = "ubuntu/trusty64"
-    lb.vm.network :private_network, ip: "192.168.0.11"
-    lb.vm.network "forwarded_port", guest: 80, host: 64001
-    lb.vm.provider "virtualbox" do |vb|
-      vb.customize ["modifyvm", :id, "--memory", "256"]
-    end
-    lb.vm.provision "shell", inline: <<-EOF
-      sudo apt-get update -y
-      sudo apt-get install -y ipvsadm
-      sudo ip addr add 192.168.0.2/24 dev eth1 label eth1:0
-      echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
-      sudo sysctl -p
-    EOF
-  end
-  config.vm.define :web1 do |web|
-    web.vm.box = "ubuntu/trusty64"
-    web.vm.network :private_network, ip: "192.168.0.3"
-    web.vm.network "forwarded_port", guest: 80, host: 64011
-    web.vm.provider "virtualbox" do |vb|
-      vb.customize ["modifyvm", :id, "--memory", "256"]
-    end
-    # web.vm.provision "shell", inline: $install_nginx
-  end
-  config.vm.define :web2 do |web|
-    web.vm.box = "ubuntu/trusty64"
-    web.vm.network :private_network, ip: "192.168.0.4"
-    web.vm.network "forwarded_port", guest: 80, host: 64012
-    web.vm.provider "virtualbox" do |vb|
-      vb.customize ["modifyvm", :id, "--memory", "256"]
-    end
-    # web.vm.provision "shell", inline: $install_nginx
   end
 
-  # $install_nginx = <<EOF
-  #   sudo apt-get update
-  #   sudo apt-get install nginx
-  # EOF
+  (0..1).each do |i|
+    config.vm.define vm_name = "lb%d" % i do |lb|
+      lb.vm.hostname = vm_name
+      lb.vm.box = "ubuntu/trusty64"
+      lb.vm.network :private_network, ip: "192.168.0.#{11+i}"
+      lb.vm.network "forwarded_port", guest: 80, host: "#{64001+i}"
+      lb.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--memory", "256"]
+      end
+      lb.vm.provision "shell", inline: <<-EOF
+        sudo apt-get update -y
+        # not necessary when use keepalived
+        #sudo apt-get install -y ipvsadm
+        #sudo ip addr add 192.168.0.2/32 dev eth1 label eth1:0
+
+        sudo apt-get install -y keepalived
+        sudo cat <<__EOF > /etc/keepalived/keepalived.conf
+global_defs {
+}
+
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth1
+    garp_master_delay 10
+    smtp_alert
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    virtual_ipaddress {
+        192.168.0.2
+    }
+}
+
+virtual_server 192.168.0.2 80 {
+    delay_loop 	1
+	lb_algo 	wlc
+	lb_kind		DR
+	protocol 	TCP
+
+	real_server 192.168.0.3 80 {
+		weight	1
+		inhibit_on_failure
+#		TCP_CHECK {
+#			connect_port 80
+#			connect_timeout 3
+#		}
+		HTTP_GET {
+			url {
+				path /index
+				status_code 200
+			}
+			connect_timeout 3
+			nb_get_retry 3
+			delay_before_retry 3
+		}
+	}
+
+	real_server 192.168.0.4 80 {
+		weight	1
+		inhibit_on_failure
+		HTTP_GET {
+			url {
+				path /index
+				status_code 200
+			}
+			connect_timeout 3
+			nb_get_retry 3
+			delay_before_retry 3
+		}
+	}
+
+	sorry_server 127.0.0.1 80
+}
+__EOF
+        # not necessary in DSR
+        #echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
+        #sudo sysctl -p
+        sudo service keepalived restart
+      EOF
+    end
+  end
+
+  (0..1).each do |i|
+    config.vm.define vm_name = "web%d" % i do |web|
+      web.vm.hostname = vm_name
+      web.vm.box = "ubuntu/trusty64"
+      web.vm.network :private_network, ip: "192.168.0.#{i+3}"
+      web.vm.network "forwarded_port", guest: 80, host: "#{64011+i}"
+      web.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--memory", "256"]
+      end
+      web.vm.provision "shell", inline: <<-EOF
+        sudo apt-get -y update
+        sudo apt-get -y install nginx
+        echo "web#{i}" | sudo tee /usr/share/nginx/html/index
+        echo "auto lo:0\niface lo:0 inet static\naddress 192.168.0.2\nnetmask 255.255.255.255" | sudo tee -a /etc/network/interfaces
+        sudo ifup lo:0
+        echo "net.ipv4.conf.all.arp_ignore = 1\nnet.ipv4.conf.all.arp_announce = 2" | sudo tee -a /etc/network/interfaces
+        sudo sysctl -p
+      EOF
+    end
+  end
+
+  $install_nginx = <<-EOF
+    sudo apt-get update
+    sudo apt-get install nginx
+  EOF
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
