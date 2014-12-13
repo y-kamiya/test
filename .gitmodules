@@ -1,0 +1,3 @@
+[submodule "lvs_by_chef/chef_repo"]
+	path = lvs_by_chef/chef_repo
+	url = git@github.com:y-kamiya/chef-repo.git

@@ -1,0 +1,57 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  (0..1).each do |i|
+    config.vm.define vm_name = "cli%d" % i do |cli|
+      cli.vm.hostname = vm_name
+      cli.vm.box = "ubuntu/trusty64"
+      cli.vm.network :private_network, ip: "192.168.0.#{100+i}"
+      cli.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--memory", "128"]
+      end
+    end
+  end
+
+  (0..1).each do |i|
+    config.vm.define vm_name = "lb%d" % i do |lb|
+      lb.vm.hostname = vm_name
+      lb.vm.box = "ubuntu/trusty64"
+      lb.vm.network :private_network, ip: "192.168.0.#{11+i}"
+      lb.vm.network "forwarded_port", guest: 80, host: "#{64001+i}"
+      lb.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--memory", "256"]
+      end
+      lb.omnibus.chef_version = :latest
+      lb.vm.provision "chef_solo" do |chef|
+        chef.cookbooks_path = "chef_repo/site-cookbooks"
+        chef.add_recipe "lvs"
+      end
+    end
+  end
+
+  (0..1).each do |i|
+    config.vm.define vm_name = "web%d" % i do |web|
+      web.vm.hostname = vm_name
+      web.vm.box = "ubuntu/trusty64"
+      web.vm.network :private_network, ip: "192.168.0.#{i+3}"
+      web.vm.network "forwarded_port", guest: 80, host: "#{64011+i}"
+      web.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--memory", "256"]
+      end
+      web.omnibus.chef_version = :latest
+      web.vm.provision "chef_solo" do |chef|
+        chef.cookbooks_path = "chef_repo/site-cookbooks"
+        chef.add_recipe "nginx"
+        chef.json = {
+            "nginx" => {
+                "node_number" => i
+            }
+        }
+      end
+    end
+  end
+end
