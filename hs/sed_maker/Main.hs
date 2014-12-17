@@ -7,9 +7,14 @@ data Action = S String String | D String deriving Show
 
 main :: IO ()
 main = do
-    as <- toAction <$> lines <$> getContents
+    as <- toAction <$> exceptInvalidLine . lines <$> getContents
     let es = map construct as
     putStr $ "sed -i -e " ++ intercalate " -e " es ++ " $1"
+
+exceptInvalidLine :: [String] -> [String]
+exceptInvalidLine = filter isNotComment . filter (/="")
+  where
+    isNotComment s = head s /= '#'
 
 construct :: Action -> String
 construct (S a b) = concat ["\"s/", a, "/", b, "/g\""]
