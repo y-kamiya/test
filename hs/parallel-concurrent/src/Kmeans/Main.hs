@@ -3,6 +3,8 @@ import Data.Ord
 import Data.Tuple
 import Data.Binary 
 import Data.Functor 
+import qualified Data.Vector as V
+import qualified Data.Vector.Mutable as MV 
 
 data Point = Point !Double !Double deriving (Eq, Show, Read)
 data PointSum = PointSum !Int !Double !Double           
@@ -30,17 +32,18 @@ findClosestCluster cs p = fst $ minimumBy (comparing snd) ds
   where
     ds = [(c, sqDistance p $ clCent c) | c <- cs]
 
-assign :: [Point] -> [Cluster] -> [Cluster]
-assign ps cs = map (uncurry pointSumToCluster) $ zip [0..] newPointSums
-  where
-    newPointSums = foldr (makeNewPointSums cs) initialPointSums ps
-    initialPointSums = take (length cs) $ repeat $ PointSum 0 0 0
+assign :: [Point] -> [Cluster] -> V.Vector PointSum
+assign ps cs = V.create $ do
+  vps <- MV.replicate (length cs) (PointSum 0 0 0)
+  let addPoint p = do
+        let n = clId $ findClosestCluster cs p
+        ps' <- MV.read vps n
+        MV.write vps n $ addToPointSum ps' p
+  mapM_ addPoint ps
+  return vps
 
-makeNewPointSums :: [Cluster] -> Point -> [PointSum] -> [PointSum]
-makeNewPointSums cs p pss = take n pss ++ [psum] ++ drop (n+1) pss
-  where
-    n = clId $ findClosestCluster cs p
-    psum = addToPointSum (pss!!n) p
+makeNewClusters :: V.Vector PointSum -> [Cluster]
+makeNewClusters vps = map (uncurry pointSumToCluster) $ zip [0..] $ V.toList vps
 
 main :: IO ()
 main = do
@@ -51,7 +54,7 @@ main = do
     where
       loop :: Int -> [Point] -> [Cluster] -> IO (Either String [Cluster])
       loop 100 _ _ = return $ Left "not converged"
-      loop n ps cs = let cs' = assign ps cs 
+      loop n ps cs = let cs' = makeNewClusters $ assign ps cs 
                      in  case cs == cs' of
                            True -> return $ Right cs'
                            False -> do
