@@ -1,10 +1,10 @@
 import Data.List
 import Data.Ord
-import Data.Tuple
 import Data.Binary 
 import Data.Functor 
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV 
+import Control.Parallel.Strategies
 
 data Point = Point !Double !Double deriving (Eq, Show, Read)
 data PointSum = PointSum !Int !Double !Double           
@@ -16,6 +16,9 @@ instance Binary Point where
 
 zeroPoint :: Point
 zeroPoint = Point 0 0
+
+zeroPointSum :: PointSum
+zeroPointSum = PointSum 0 0 0
 
 sqDistance :: Point -> Point -> Double
 sqDistance (Point x1 y1) (Point x2 y2) = (x2 - x1)^2 + (y2 - y1)^2 
@@ -32,9 +35,9 @@ findClosestCluster cs p = fst $ minimumBy (comparing snd) ds
   where
     ds = [(c, sqDistance p $ clCent c) | c <- cs]
 
-assign :: [Point] -> [Cluster] -> V.Vector PointSum
-assign ps cs = V.create $ do
-  vps <- MV.replicate (length cs) (PointSum 0 0 0)
+assign :: [Cluster] -> [Point] -> V.Vector PointSum
+assign cs ps = V.create $ do
+  vps <- MV.replicate (length cs) zeroPointSum
   let addPoint p = do
         let n = clId $ findClosestCluster cs p
         ps' <- MV.read vps n
@@ -45,6 +48,25 @@ assign ps cs = V.create $ do
 makeNewClusters :: V.Vector PointSum -> [Cluster]
 makeNewClusters vps = map (uncurry pointSumToCluster) $ zip [0..] $ V.toList vps
 
+split :: [Point] -> [[Point]]
+split [] = [[]]
+split ps = a : split b
+  where (a, b) = splitAt 100 ps
+
+combine :: PointSum -> PointSum -> PointSum
+combine (PointSum c1 x1 y1) (PointSum c2 x2 y2) = PointSum (c1+c2) (x1+x2) (y1+y2)
+
+assign_parallel :: [Cluster] -> [[Point]] -> V.Vector PointSum
+assign_parallel cs pss = foldr (V.zipWith combine) (V.replicate (length cs) zeroPointSum) vpss 
+  where
+    vpss = map (assign cs) pss `using` parList rseq
+
+step :: [Cluster] -> [Point] -> [Cluster]
+step cs ps = makeNewClusters $ assign cs ps 
+
+step_parallel :: [Cluster] -> [Point] -> [Cluster]
+step_parallel cs ps = makeNewClusters $ assign_parallel cs $ split ps
+
 main :: IO ()
 main = do
     points <- decodeFile "points.bin"
@@ -54,7 +76,7 @@ main = do
     where
       loop :: Int -> [Point] -> [Cluster] -> IO (Either String [Cluster])
       loop 100 _ _ = return $ Left "not converged"
-      loop n ps cs = let cs' = makeNewClusters $ assign ps cs 
+      loop n ps cs = let cs' = step_parallel cs ps
                      in  case cs == cs' of
                            True -> return $ Right cs'
                            False -> do
