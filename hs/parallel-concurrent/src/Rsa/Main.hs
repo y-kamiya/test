@@ -42,7 +42,7 @@ decrypt_seq = byLine $ map (byChar decode)
 
 encrypt :: ByteString -> ByteString
 encrypt = B.unlines 
-        . withStrategy (parList rseq) 
+        . withStrategy (parList rdeepseq) 
         . map (byChar encode)
         . chunk 1000
 
