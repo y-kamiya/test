@@ -9,26 +9,47 @@ data LispVal = Atom String
              | String String
              | Bool Bool
 
--- instance Show LispVal where
---   show = showVal
--- 
--- showVal :: LispVal -> String
--- showVal (String s) = "\"" ++ s ++ "\""
--- showVal (Number n) = show n
--- showVal (Atom s) = s
--- showVal (Bool True) = "#t"
--- showVal (Bool False) = "#f"
--- showVal (List list) = "(" ++ unwordList list ++ ")"
--- showVal (DottedList list v) = "(" ++ unwordList list ++ " . " ++ showVal v ++ ")"
--- 
--- eval :: LispVal -> LispVal
--- eval val@(String _) = val
--- eval val@(Number _) = val
--- eval val@(Bool _) = val
--- eval (List [Atom "quote", val]) = val
--- 
--- unwordList :: [LispVal] -> String
--- unwordList = unwords . map showVal
+instance Show LispVal where
+  show = showVal
+
+showVal :: LispVal -> String
+showVal (String s) = "\"" ++ s ++ "\""
+showVal (Number n) = show n
+showVal (Atom s) = s
+showVal (Bool True) = "#t"
+showVal (Bool False) = "#f"
+showVal (List list) = "(" ++ unwordList list ++ ")"
+showVal (DottedList list v) = "(" ++ unwordList list ++ " . " ++ showVal v ++ ")"
+
+eval :: LispVal -> LispVal
+eval val@(String _) = val
+eval val@(Number _) = val
+eval val@(Bool _) = val
+eval (List [Atom "quote", val]) = val
+eval (List (Atom fname : args)) = apply fname $ map eval args
+
+unwordList :: [LispVal] -> String
+unwordList = unwords . map showVal
+
+apply :: String -> [LispVal] -> LispVal
+apply fname args = maybe (Bool False) ($ args) $ lookup fname primitives
+
+primitives :: [(String, [LispVal] -> LispVal)]
+primitives = [("+", numericBinop (+))
+             ,("-", numericBinop (-))
+             ,("*", numericBinop (*))
+             ,("/", numericBinop div)
+             ,("mod", numericBinop mod)
+             ,("quotient", numericBinop quot)
+             ,("remainder", numericBinop rem)
+             ]
+
+numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
+numericBinop op params = Number $ foldl1 op $ map unpackNum params
+
+unpackNum :: LispVal -> Integer
+unpackNum (Number n) = n
+unpackNum _ = 0
 
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
@@ -36,10 +57,10 @@ symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 spaces :: Parser ()
 spaces = skipMany1 space
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-  Left err -> "No match: " ++ show err
-  Right val -> "Found " ++ show val
+  Left err -> String $ "No match: " ++ show err
+  Right val -> val
 
 parseString :: Parser LispVal
 parseString = do
@@ -80,7 +101,5 @@ parseDottedList = do
   return $ DottedList head tail
 
 main :: IO ()
-main = do
-  [s] <- getArgs
-  putStrLn $ readExpr s
+main = getArgs >>= print . eval .readExpr . head
 
