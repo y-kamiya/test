@@ -60,3 +60,29 @@ expressions :: [Digit] -> [Expression]
 expressions = foldr extend []
 
 solutions = filter (good . valExpr) . expressions
+
+
+-- #7 
+data Tree = Leaf Int | Fork Tree Tree deriving Show
+
+cost (Leaf x) = x
+cost (Fork u v) = 1 + (cost u `max` cost v)
+
+--mincostTree = minBy cost . trees
+
+trees :: [Int] -> [Tree]
+trees [x] = [Leaf x]
+trees (x:xs) = concatMap (prefixes x) (trees xs)
+
+prefixes :: Int -> Tree -> [Tree]
+prefixes x t@(Leaf y) = [Fork (Leaf x) t]
+prefixes x t@(Fork u v) = [Fork (Leaf x) t] ++ [Fork u' v | u' <- prefixes x u]
+
+foldrn :: (a -> b -> b) -> (a -> b) -> [a] -> b
+foldrn f g [x] = g x
+foldrn f g (x:xs) = f x (foldrn f g xs)
+
+trees' :: [Int] -> [Tree]
+trees' = foldrn (concatMap . prefixes) (wrap . Leaf)
+
+wrap x = [x]
