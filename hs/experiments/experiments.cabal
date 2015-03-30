@@ -31,3 +31,10 @@ executable operational
   hs-source-dirs:      src/Operational
   default-language:    Haskell2010
 
+executable free
+  main-is:             Main.hs
+  build-depends:       base >=4.7 && <4.8
+                     , free 
+  hs-source-dirs:      src/Free
+  default-language:    Haskell2010
+
