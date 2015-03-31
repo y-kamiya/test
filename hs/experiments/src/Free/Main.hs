@@ -14,4 +14,5 @@ main = do
     "chario" -> CharIO.defaultMain
     "stack" -> print $ Stack.runStack Stack.add [1,3]
     "game1" -> Game.defaultMain
-    "game2" -> print $ Game.defaultMain' (0,0)
+    "game2" -> Game.defaultMain' (0,0)
+    "game3" -> print $ Game.defaultMain'' (0,0)
