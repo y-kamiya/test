@@ -64,6 +64,23 @@ stepL g = map (lnode g) . group
 group [] = []
 group (x:y:xs) = [x,y] : group xs
 
+
+-- why make Nexus
+solve :: ([a] -> b) -> ([b] -> b) -> [a] -> b
+solve f g = head . until single (map g . group) . map (f . wrap)
+
+uncats [x,y] = [([x],[y])]
+uncats (x:xs) = ([x],xs) : map (cons x) (uncats xs)
+  where cons x (ys, zs) = (x:ys, zs)
+
+lnode' g [u,v] = LNode (g $ zip (lspine u) (rspine v)) [u,v]
+
+lspine, rspine :: LTree a -> [a]
+lspine (LLeaf x) = [x]
+lspine (LNode x [u,v]) = lspine u ++ [x]
+rspine (LLeaf x) = [x]
+rspine (LNode x [u,v]) = [x] ++ rspine v
+
 main :: IO ()
 main = print $ mkNexus id merge "abcd"
   where merge = concat
