@@ -39,3 +39,10 @@ executable free
   hs-source-dirs:      src/Free
   default-language:    Haskell2010
 
+executable typefamily
+  main-is:             Main.hs
+  build-depends:       base >=4.7 && <4.8
+                     , containers
+  hs-source-dirs:      src/TypeFamily
+  default-language:    Haskell2010
+
