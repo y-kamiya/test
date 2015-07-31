@@ -17,13 +17,13 @@ cabal-version:       >=1.10
 
 executable continue
   main-is:             Main.hs
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base >=4.7 && <5.0
   hs-source-dirs:      src/Continue
   default-language:    Haskell2010
 
 executable operational
   main-is:             Main.hs
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base >=4.7 && <5.0
                      , operational 
                      , transformers 
                      , mtl
@@ -33,7 +33,7 @@ executable operational
 
 executable free
   main-is:             Main.hs
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base >=4.7 && <5.0
                      , free 
                      , random
   hs-source-dirs:      src/Free
@@ -41,8 +41,15 @@ executable free
 
 executable typefamily
   main-is:             Main.hs
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base >=4.7 && <5.0
                      , containers
   hs-source-dirs:      src/TypeFamily
+  default-language:    Haskell2010
+
+executable monadt
+  main-is:             Main.hs
+  build-depends:       base >=4.7 && <5.0
+                     , mtl
+  hs-source-dirs:      src/Monadt
   default-language:    Haskell2010
 
