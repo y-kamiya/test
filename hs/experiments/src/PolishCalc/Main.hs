@@ -2,6 +2,7 @@ module Main where
 
 import Data.List.Split
 import qualified StateEval as SE
+import qualified StateTEval as STE
 
 type Result = (Float, [String])
 
@@ -11,6 +12,8 @@ main = do
   print $ eval "( 1 + 2 ) * 3 - 1"
   print $ SE.eval "1 + 2 * 3 - 1"
   print $ SE.eval "( 1 + 2 ) * 3 - 1"
+  print $ STE.eval "1 + 2 * 3 - 1"
+  print $ STE.eval "( 1 + 2 ) * 3 - 1"
 
 eval :: String -> Float
 eval = fst . expr . splitOn " "
