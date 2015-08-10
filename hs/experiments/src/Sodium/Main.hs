@@ -1,11 +1,21 @@
 module Main where
 
+import System.Environment
 import Control.Concurrent
 import Control.Monad
 import FRP.Sodium
 
+import Chat
+
 main :: IO ()
 main = do
+  args <- getArgs
+  case head args of
+    "simple" -> simple
+    "chat" -> chat
+
+simple :: IO ()
+simple = do
   (event, push) <- sync newEvent
   unlisten <- sync $ listen event $ \_ -> print "tick"
   behaviour <- sync $ hold 0 event
