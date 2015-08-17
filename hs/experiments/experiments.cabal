@@ -67,6 +67,7 @@ executable sodium
   build-depends:       base >=4.7 && <5.0
                      , sodium
                      , network
+                     , containers
   hs-source-dirs:      src/Sodium
   default-language:    Haskell2010
 

@@ -13,6 +13,7 @@ main = do
   case head args of
     "simple" -> simple
     "chat" -> chat
+    "normalChat" -> normalChat
 
 simple :: IO ()
 simple = do
