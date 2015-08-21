@@ -36,7 +36,7 @@ chat = do
     handler h (Join name) = hPutStrLn h $ "Join " <> name
     handler h (Message name msg)
       | msg == "exit\r" = do
-          print "handle is closed"
+          print $ "handle is closed: " <> name
           hClose h
       | otherwise = hPutStrLn h $ "from " <> name <> ": " <> msg
 
@@ -60,10 +60,15 @@ normalChat = do
     talk :: Server -> Handle -> String -> IO ()
     talk server@Server{..} h name = do
       msg <- hGetLine h
-      clientMap <- atomically $ readTVar clients
-      void $ flip M.traverseWithKey clientMap $ \_ handle ->
-        hPutStrLn handle $ name <> ": " <> msg
-      talk server h name
+      case msg of
+        "exit\r" -> do
+          print $ "handle is closed: " <> name
+          hClose h
+        _ -> do
+          clientMap <- atomically $ readTVar clients
+          void $ flip M.traverseWithKey clientMap $ \_ handle ->
+            hPutStrLn handle $ name <> ": " <> msg
+          talk server h name
 
     addClient :: Server -> Handle -> String -> STM ()
     addClient Server{..} h name = do
