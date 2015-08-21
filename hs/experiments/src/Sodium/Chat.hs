@@ -11,32 +11,34 @@ import Control.Concurrent
 import Control.Monad
 import FRP.Sodium
 
-data Chat = Join | Message String
+data ChatEvent = Join String | Message String String
 
 chat :: IO ()
 chat = do
+  let port = 8888
   (event, push) <- sync newEvent
-  sock <- listenOn $ PortNumber 8888
+  sock <- listenOn $ PortNumber port
+  print $ "start listening port " <> show port
   forever $ do
     (handle, host, port) <- accept sock
     let name = host <> show port
-    unlisten <- sync $ listen event (handler name handle)
-    sync $ push Join
-    forkFinally (talk handle push) (\_ -> hClose handle)
+    unlisten <- sync $ listen event (handler handle)
+    sync $ push $ Join name
+    forkFinally (talk name handle push) (\_ -> hClose handle)
+  where
+    talk :: String -> Handle -> (ChatEvent -> Reactive ()) -> IO ()
+    talk name h push = forever $ do
+      msg <- hGetLine h
+      print $ "get msg from handle " <> msg
+      sync $ push $ Message name msg
 
-talk :: Handle -> (Chat -> Reactive ()) -> IO ()
-talk h push = forever $ do
-  msg <- hGetLine h
-  print $ "get msg from handle " <> msg
-  sync $ push $ Message msg
-
-handler :: String -> Handle -> Chat -> IO ()
-handler name h Join = hPutStrLn h $ "Join " <> name
-handler name h (Message msg) 
-  | msg == "exit\r" = do
-      print "handle is closed"
-      hClose h
-  | otherwise = hPutStrLn h $ "from " <> name <> ": " <> msg
+    handler :: Handle -> ChatEvent -> IO ()
+    handler h (Join name) = hPutStrLn h $ "Join " <> name
+    handler h (Message name msg)
+      | msg == "exit\r" = do
+          print "handle is closed"
+          hClose h
+      | otherwise = hPutStrLn h $ "from " <> name <> ": " <> msg
 
 
 data Server = Server { clients :: TVar (M.Map String Handle) }
@@ -52,16 +54,16 @@ normalChat = do
     (handle, host, port) <- accept sock
     let name = host <> show port
     print $ "connected from " <> name
-    atomically $ addClient server handle name 
+    atomically $ addClient server handle name
     forkFinally (talk server handle name) (\_ -> hClose handle)
   where
     talk :: Server -> Handle -> String -> IO ()
     talk server@Server{..} h name = do
       msg <- hGetLine h
       clientMap <- atomically $ readTVar clients
-      void $ flip M.traverseWithKey clientMap $ \_ handle -> do
+      void $ flip M.traverseWithKey clientMap $ \_ handle ->
         hPutStrLn handle $ name <> ": " <> msg
-        talk server h name
+      talk server h name
 
     addClient :: Server -> Handle -> String -> STM ()
     addClient Server{..} h name = do
