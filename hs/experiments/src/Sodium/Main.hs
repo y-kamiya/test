@@ -14,6 +14,23 @@ main = do
     "simple" -> simple
     "chat" -> chat
     "normalChat" -> normalChat
+    "behaviour" -> behaviour
+
+behaviour :: IO ()
+behaviour = do
+  (b, push) <- sync $ newBehaviour (1::Int)
+  a <- sync $ sample b
+  print a
+  sync $ push 2
+  aa <- sync $ sample b
+  print aa
+  let e = updates b
+  _ <- sync $ listen e $ \x -> print x
+  sync $ push 3
+  let ee = value b
+  _ <- sync $ listen ee $ \x -> print x
+  sync $ push 4
+  sync $ push 5
 
 simple :: IO ()
 simple = do
