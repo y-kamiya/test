@@ -6,6 +6,7 @@ import Control.Monad
 import FRP.Sodium
 
 import Chat
+import Counter
 
 main :: IO ()
 main = do
@@ -15,6 +16,7 @@ main = do
     "chat" -> chat
     "normalChat" -> normalChat
     "behaviour" -> behaviour
+    "counter" -> counterMain
 
 behaviour :: IO ()
 behaviour = do
