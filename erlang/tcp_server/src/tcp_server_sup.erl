@@ -4,7 +4,7 @@
 -export([init/1]).
 
 start_server(Port) ->
-    supervisor:start_link(?MODULE, [Port]).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, [Port]).
 
 init([Port]) ->
     io:format("~p~n", [erl_syntax:abstract(Port)]),
