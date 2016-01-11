@@ -1,7 +1,6 @@
 package http;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -13,29 +12,12 @@ public class Main {
         try {
             ServerSocket server = new ServerSocket(8011);
             Socket socket = server.accept();
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
-            // in.lines().forEach(System.out::println);
+            InputStream in = socket.getInputStream();
 
-            String line = in.readLine();
-            StringBuilder header = new StringBuilder();
+            HttpRequest request = new HttpRequest(in);
 
-            int contentLength = 0;
-
-            while (line != null && !line.isEmpty()) {
-                if (line.startsWith("Content-Length")) {
-                    contentLength = Integer.parseInt(line.split(":")[1].trim());
-                }
-                header.append(line + "\n");
-                line = in.readLine();
-            }
-            String body = null;
-            if (0 < contentLength) {
-                char[] c = new char[contentLength];
-                in.read(c);
-                body = new String(c);
-            }
-            System.out.println(header);
-            System.out.println(body);
+            System.out.println(request.getHeaderText());
+            System.out.println(request.getBodyText());
 
         } catch (Exception e) {
             System.out.println("error!");
