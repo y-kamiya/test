@@ -9,52 +9,36 @@ import java.util.stream.Stream;
 
 public class HttpRequest {
 
-    public static final String CRLF = "\r\n";
-
-    private final String headerText;
+    private final HttpHeader header;
     private final String bodyText;
 
     public HttpRequest(InputStream input) {
         try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(input, "UTF-8"));
-            this.headerText = this.readHeaderText(in);
-            this.bodyText = this.readHeaderText(in);
+            BufferedReader br = new BufferedReader(new InputStreamReader(input, "UTF-8"));
+            this.header = new HttpHeader(br);
+            this.bodyText = this.readBodyText(br);
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private String readHeaderText(BufferedReader in) throws IOException {
-        String line = in.readLine();
-        StringBuilder header = new StringBuilder();
-        while (line != null && !line.isEmpty()) {
-            header.append(line + "\n");
-            line = in.readLine();
-        }
-        return header.toString();
-    }
-
-    private String readHBodyText(BufferedReader in) throws IOException {
-        final int contentLength = this.getContentLength();
+    private String readBodyText(BufferedReader br) throws IOException {
+        final int contentLength = this.header.getContentLength();
         if (contentLength <= 0) {
             return null;
         }
         char[] c = new char[contentLength];
-        in.read(c);
+        br.read(c);
         return new String(c);
     }
 
     private int getContentLength() {
-        return Stream.of(this.headerText.split(CRLF))
-                     .filter(headerLine -> headerLine.startsWith("Content-Length"))
-                     .map(contentLengthHeader -> contentLengthHeader.split(":")[1].trim())
-                     .mapToInt(Integer::parseInt)
-                     .findFirst().orElse(0);
+        return this.header.getContentLength();
     }
 
     public String getHeaderText() {
-        return this.headerText;
+        return this.header.getHeaderText();
     }
 
     public String getBodyText() {
