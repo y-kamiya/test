@@ -1,5 +1,7 @@
 package http;
 
+import static http.Constant.*;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.HashMap;
@@ -7,8 +9,6 @@ import java.util.Map;
 
 public class HttpHeader {
     
-    public static final String CRLF = "\n";
-
     private final String headerText;
     private Map<String, String> messageHeaders = new HashMap<>();
 
@@ -22,7 +22,7 @@ public class HttpHeader {
     }
 
     private String readRequestLine(BufferedReader br) throws IOException {
-        return br.readLine();
+        return br.readLine() + CRLF;
     }
 
     private StringBuilder readMessageLine(BufferedReader br) throws IOException {

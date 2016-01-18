@@ -1,6 +1,9 @@
 package http;
 
+import static http.Constant.*;
+
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -13,11 +16,18 @@ public class Main {
             ServerSocket server = new ServerSocket(8011);
             Socket socket = server.accept();
             InputStream in = socket.getInputStream();
+            OutputStream out = socket.getOutputStream();
 
             HttpRequest request = new HttpRequest(in);
 
             System.out.println(request.getHeaderText());
             System.out.println(request.getBodyText());
+
+            HttpResponse response = new HttpResponse(Status.OK);
+            response.addHeader("Content-Type", ContentType.TEXT_HTML);
+            response.setBody("<h1>Hello World!!</h1>");
+
+            response.writeTo(out);
 
         } catch (Exception e) {
             System.out.println("error!");
