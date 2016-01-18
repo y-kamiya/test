@@ -36,10 +36,10 @@ public class HttpServer {
 
             HttpResponse response;
             if (header.isGetMethod()) {
-                File file = new File(".", header.getPath());
+                File file = new File("static", header.getPath());
                 if (file.exists()) {
                     response = new HttpResponse(Status.OK);
-                    response.setBody(new File(".", header.getPath()));
+                    response.setBody(file);
                 } else {
                     response = new HttpResponse(Status.NOT_FOUND);
                     response.setBody("file is not found");
