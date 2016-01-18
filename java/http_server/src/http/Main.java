@@ -2,6 +2,7 @@ package http;
 
 import static http.Constant.*;
 
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
@@ -24,9 +25,11 @@ public class Main {
             System.out.println(request.getBodyText());
 
             HttpResponse response = new HttpResponse(Status.OK);
-            response.addHeader("Content-Type", ContentType.TEXT_HTML);
-            response.setBody("<h1>Hello World!!</h1>");
 
+            HttpHeader header = request.getHeader();
+            if (header.isGetMethod()) {
+                response.setBody(new File(".", header.getPath()));
+            }
             response.writeTo(out);
 
         } catch (Exception e) {

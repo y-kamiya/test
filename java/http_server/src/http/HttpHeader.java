@@ -10,6 +10,8 @@ import java.util.Map;
 public class HttpHeader {
     
     private final String headerText;
+    private String method;
+    private String path;
     private Map<String, String> messageHeaders = new HashMap<>();
 
     public HttpHeader(BufferedReader br) throws IOException {
@@ -22,7 +24,12 @@ public class HttpHeader {
     }
 
     private String readRequestLine(BufferedReader br) throws IOException {
-        return br.readLine() + CRLF;
+        String requestLine = br.readLine();
+
+        String[] parts = requestLine.split(" ");
+        this.method = parts[0].toUpperCase();
+        this.path = parts[1];
+        return requestLine + CRLF;
     }
 
     private StringBuilder readMessageLine(BufferedReader br) throws IOException {
@@ -50,6 +57,14 @@ public class HttpHeader {
     public int getContentLength() {
         String contentLength = this.messageHeaders.getOrDefault("Content-Length", "0");
         return Integer.parseInt(contentLength);
+    }
+
+    public boolean isGetMethod() {
+        return this.method.equals("GET");
+    }
+
+    public String getPath() {
+        return this.path;
     }
 }
 
