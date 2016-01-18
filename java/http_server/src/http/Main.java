@@ -24,11 +24,21 @@ public class Main {
             System.out.println(request.getHeaderText());
             System.out.println(request.getBodyText());
 
-            HttpResponse response = new HttpResponse(Status.OK);
-
             HttpHeader header = request.getHeader();
+
+            HttpResponse response;
             if (header.isGetMethod()) {
-                response.setBody(new File(".", header.getPath()));
+                File file = new File(".", header.getPath());
+                if (file.exists()) {
+                    response = new HttpResponse(Status.OK);
+                    response.setBody(new File(".", header.getPath()));
+                } else {
+                    response = new HttpResponse(Status.NOT_FOUND);
+                    response.setBody("file is not found");
+                }
+            } else {
+                response = new HttpResponse(Status.OK);
+                response.setBody("this is not GET request");
             }
             response.writeTo(out);
 
