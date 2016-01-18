@@ -1,19 +1,14 @@
 package server;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Echo {
 
-    private final String CRLF = "\r\n";
-    private final String COMMAND_QUIT = ":q";
+    private final int MAX_THREAD_NUM = 2;
 
     private int port;
 
@@ -22,36 +17,13 @@ public class Echo {
     }
 
     public void start() throws IOException {
+        ExecutorService exec = Executors.newFixedThreadPool(MAX_THREAD_NUM);
         ServerSocket server = new ServerSocket(this.port);
         while (true) {
             System.out.println("wait accept");
             Socket socket = server.accept();
-            this.run(socket);
+            exec.submit(new EchoRunnable(socket));
         }
     }
 
-    private void run(Socket socket) throws IOException {
-        try {
-            InputStream in = socket.getInputStream();
-            OutputStream out = socket.getOutputStream();
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
-
-            while (true) {
-                System.out.println("wait input");
-                String input = br.readLine();
-                if (input.equals(COMMAND_QUIT)) {
-                    break;
-                }
-                bw.write(input + CRLF);
-                bw.flush();
-            }
-            socket.close();
-
-        } catch (Exception e) {
-            System.out.println("error!");
-            System.out.println(e);
-        }
-    }
 }
