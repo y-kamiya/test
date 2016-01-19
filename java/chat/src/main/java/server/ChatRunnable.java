@@ -9,14 +9,14 @@ import java.io.BufferedWriter;
 import java.net.Socket;
 import java.util.Objects;
 
-public class EchoRunnable implements Runnable {
+public class ChatRunnable implements Runnable {
 
     private final String CRLF = "\r\n";
     private final String COMMAND_QUIT = ":q";
 
     private Socket socket;
 
-    public EchoRunnable(Socket socket) {
+    public ChatRunnable(Socket socket) {
         this.socket = socket;
     }
 
@@ -47,3 +47,4 @@ public class EchoRunnable implements Runnable {
         }
     }
 }
+
