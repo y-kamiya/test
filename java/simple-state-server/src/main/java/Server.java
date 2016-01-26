@@ -9,9 +9,11 @@ public class Server {
     private final int MAX_THREAD_NUM = 2;
 
     private int port;
+    private ServerState serverState;
 
-    public Server(int port) {
+    public Server(int port, int initialFactor) {
         this.port = port;
+        this.serverState = new ServerState(initialFactor);
     }
 
     public void start() throws IOException {
@@ -20,7 +22,7 @@ public class Server {
         while (true) {
             System.out.println("wait accept");
             Socket socket = server.accept();
-            exec.submit(new EchoRunnable(socket));
+            exec.submit(new FactorRunnable(socket, this.serverState));
         }
     }
 }
