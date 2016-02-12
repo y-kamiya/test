@@ -9,6 +9,7 @@ public class CommandOther extends Command {
 		this.input = input;
 	}
 
+	@Override
     public void execute(ServerState serverState, Socket socket) throws IOException {
     	try {
 			int num = Integer.parseInt(input);

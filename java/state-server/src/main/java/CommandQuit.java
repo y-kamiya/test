@@ -9,6 +9,7 @@ public class CommandQuit extends Command {
 		return isEnd;
 	}
 
+	@Override
     public void execute(ServerState serverState, Socket socket) {
         // noop
     }
