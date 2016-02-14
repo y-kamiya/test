@@ -4,9 +4,8 @@ public class Main {
         System.out.println("start server");
 
         int port = Integer.parseInt(args[0]);
-        int initialFactor = Integer.parseInt(args[1]);
 
-        Server acceptor  = new Server(port, initialFactor);
+        Server acceptor  = new Server(port);
         acceptor.start();
     }
 }

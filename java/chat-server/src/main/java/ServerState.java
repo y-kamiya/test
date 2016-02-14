@@ -1,40 +1,16 @@
-import java.io.BufferedWriter;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerState {
 
-    private int factor;
-    private Map<String, BufferedWriter> clientMap = new HashMap<String, BufferedWriter>();
+    private Map<String, ClientState> clientMap = new ConcurrentHashMap<String, ClientState>();
 
-    public ServerState(int initialFactor) {
-        this.factor = initialFactor;
+    public synchronized void addClient(String name, ClientState clientState) {
+    	clientMap.put(name, clientState);
     }
 
-    public synchronized int getFactor() { 
-        return this.factor;
+    public boolean isNameDuplicate(String name) {
+    	return clientMap.containsKey(name);
     }
-
-    public synchronized int setFactor(int factor) {
-        return this.factor = factor;
-    }
-
-    public synchronized Collection<BufferedWriter> getAllClient() {
-        return this.clientMap.values();
-    }
-
-    public synchronized BufferedWriter getClientById(String id) {
-        return this.clientMap.get(id);
-    }
-
-    public synchronized void removeClient(String id) {
-        this.clientMap.remove(id);
-    }
-
-    public synchronized void addClient(String id, BufferedWriter writer) {
-        this.clientMap.put(id, writer);
-    }
-
 }
 

@@ -32,4 +32,7 @@ public class IOUtil {
     	IOUtil.write(socket, message + CRLF);
     }
 
+    public static String readLine(Socket socket) throws IOException {
+    	return IOUtil.getBufferedReader(socket).readLine();
+    }
 }

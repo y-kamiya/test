@@ -13,9 +13,8 @@ public class Server {
     private int port;
     private ServerState serverState;
 
-    public Server(int port, int initialFactor) {
+    public Server(int port) {
         this.port = port;
-        this.serverState = new ServerState(initialFactor);
     }
 
     public void start() throws IOException {
@@ -26,8 +25,8 @@ public class Server {
 				System.out.println("wait accept");
 				Socket socket = server.accept();
 				ArrayBlockingQueue<Command> queue = new ArrayBlockingQueue<Command>(MAX_QUEUE_SIZE);
-				exec.submit(new ReceiverRunnable(socket, queue));
-				exec.submit(new ServerRunnable(socket, this.serverState, queue));
+				exec.submit(new ReceiverRunnable(socket, serverState, queue));
+				exec.submit(new ServerRunnable(socket, serverState, queue));
 			}
         } finally {
         	server.close();
