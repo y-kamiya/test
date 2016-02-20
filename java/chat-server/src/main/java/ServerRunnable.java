@@ -18,18 +18,11 @@ public class ServerRunnable implements Runnable {
         Objects.requireNonNull(this.socket);
 
         try {
-            int previousFactor = -1;
             while (true) {
-                int currentFactor = this.serverState.getFactor();
-                if (previousFactor != currentFactor) {
-                    previousFactor = currentFactor;
-                    IOUtil.writeln(socket, "new factor: " + currentFactor);
-                } else {
-                    Command command = this.queue.take();
-                    command.execute(this.serverState, socket);
-                    if (command.getIsEnd()) {
-                        break;
-                    }
+                Command command = this.queue.take();
+                command.execute(this.serverState, socket);
+                if (command.getIsEnd()) {
+                    break;
                 }
             }
             this.socket.close();

@@ -15,6 +15,7 @@ public class Server {
 
     public Server(int port) {
         this.port = port;
+        this.serverState = new ServerState();
     }
 
     public void start() throws IOException {

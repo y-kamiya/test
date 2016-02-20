@@ -12,9 +12,7 @@ public class CommandOther extends Command {
 	@Override
     public void execute(ServerState serverState, Socket socket) throws IOException {
     	try {
-			int num = Integer.parseInt(input);
-			int factor = serverState.getFactor();
-    		IOUtil.writeln(socket, String.valueOf(num * factor));
+    		IOUtil.writeln(socket, input);
     	} catch (NumberFormatException e) {
     		IOUtil.writeln(socket, "input must be int");
     	}
