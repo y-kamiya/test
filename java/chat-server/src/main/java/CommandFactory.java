@@ -6,21 +6,19 @@ public class CommandFactory {
 
     private static final String COMMAND_QUIT = ":q";
 
-	public static Command create(Socket socket) throws IOException {
-    	BufferedReader br = IOUtil.getBufferedReader(socket);
-    	String input = br.readLine();
-    	return CommandFactory.createCommand(input);
+    public static Command create(String name, String input) throws IOException {
+        return CommandFactory.createCommand(name, input);
     }
-    
-    private static Command createCommand(String input) {
-    	String[] inputs = input.split("\\s+", 0);
-    	if (inputs[0].equals(COMMAND_QUIT)) {
-    	    return new CommandQuit();
-    	} else {
-    	    return new CommandOther(inputs[0]);
-    	}
+
+    private static Command createCommand(String name, String input) {
+        String[] inputs = input.split("\\s+", 0);
+        if (inputs[0].equals(COMMAND_QUIT)) {
+            return new CommandQuit(name);
+        } else {
+            return new CommandOther(name, inputs[0]);
+        }
     }
-    	
-    	
+
+
 }
 

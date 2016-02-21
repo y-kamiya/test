@@ -8,9 +8,9 @@ public class ReceiverRunnable implements Runnable {
 
     private Socket socket;
     private ServerState serverState;
-    private ArrayBlockingQueue<Command> queue;
+    private ArrayBlockingQueue<Message> queue;
 
-    public ReceiverRunnable(Socket socket, ServerState serverState, ArrayBlockingQueue<Command> queue) {
+    public ReceiverRunnable(Socket socket, ServerState serverState, ArrayBlockingQueue<Message> queue) {
         this.socket = socket;
         this.serverState = serverState;
         this.queue = queue;
@@ -18,41 +18,46 @@ public class ReceiverRunnable implements Runnable {
 
     public void run() {
         String clientName;
-    	try {
+        try {
             clientName = this.readName();
-            IOUtil.writeln(socket, "Hi, " + clientName);
             this.addClient(clientName);
-    	} catch (IOException e) {
+        } catch (IOException e) {
             System.out.println("IOException in readName(): " + e);
-    		return;
-    	}
-        while (true) {
-        	try {
-				Command command = CommandFactory.create(socket);
-				queue.add(command);
-				if (command.getIsEnd()) {
-					break;
-				}
-        	} catch (IOException e) {
-        		continue;
-        	}
+            return;
         }
+        while (true) {
+            try {
+                String input = IOUtil.readLine(socket);
+                Message message = new MessageCommand(clientName, input, serverState);
+                queue.add(message);
+                if (message.getIsEnd()) {
+                    break;
+                }
+            } catch (IOException e) {
+                continue;
+            }
+        }
+        this.removeClient(clientName);
     }
-    
+
+    private void removeClient(String name) {
+        serverState.removeClient(name);
+    }
+
     private String readName() throws IOException {
-    	IOUtil.writeln(socket, "What is your name?");
-    	String name = IOUtil.readLine(socket);
-    	System.out.println("client name: " + name);
-    	if (!serverState.isNameDuplicate(name)) {
-    		return name;
-    	}
-    	return this.readName();
+        IOUtil.writeln(socket, "What is your name?");
+        String name = IOUtil.readLine(socket);
+        System.out.println("client name: " + name);
+        if (!serverState.isNameDuplicate(name)) {
+            return name;
+        }
+        return this.readName();
     }
 
     private void addClient(String name) throws IOException {
-    	ClientState clientState = new ClientState(name, socket);
-    	serverState.addClient(name, clientState);
-    	IOUtil.writeln(socket, "Hi, " + name);
+        ClientState clientState = new ClientState(name, socket, queue);
+        serverState.addClient(name, clientState);
+        IOUtil.writeln(socket, "Hi, " + name);
     }
 
 }

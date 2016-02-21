@@ -6,9 +6,9 @@ public class ServerRunnable implements Runnable {
 
     private Socket socket;
     private ServerState serverState;
-    private ArrayBlockingQueue<Command> queue;
+    private ArrayBlockingQueue<Message> queue;
 
-    public ServerRunnable(Socket socket, ServerState serverState, ArrayBlockingQueue<Command> queue) {
+    public ServerRunnable(Socket socket, ServerState serverState, ArrayBlockingQueue<Message> queue) {
         this.socket = socket;
         this.serverState = serverState;
         this.queue = queue;
@@ -19,9 +19,9 @@ public class ServerRunnable implements Runnable {
 
         try {
             while (true) {
-                Command command = this.queue.take();
-                command.execute(this.serverState, socket);
-                if (command.getIsEnd()) {
+                Message message = this.queue.take();
+                message.execute(socket);
+                if (message.getIsEnd()) {
                     break;
                 }
             }

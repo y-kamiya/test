@@ -22,15 +22,15 @@ public class Server {
         ExecutorService exec = Executors.newFixedThreadPool(MAX_CLIENT_NUM * 2);
         ServerSocket server = new ServerSocket(this.port);
         try {
-			while (true) {
-				System.out.println("wait accept");
-				Socket socket = server.accept();
-				ArrayBlockingQueue<Command> queue = new ArrayBlockingQueue<Command>(MAX_QUEUE_SIZE);
-				exec.submit(new ReceiverRunnable(socket, serverState, queue));
-				exec.submit(new ServerRunnable(socket, serverState, queue));
-			}
+            while (true) {
+                System.out.println("wait accept");
+                Socket socket = server.accept();
+                ArrayBlockingQueue<Message> queue = new ArrayBlockingQueue<Message>(MAX_QUEUE_SIZE);
+                exec.submit(new ReceiverRunnable(socket, serverState, queue));
+                exec.submit(new ServerRunnable(socket, serverState, queue));
+            }
         } finally {
-        	server.close();
+            server.close();
         }
     }
 }

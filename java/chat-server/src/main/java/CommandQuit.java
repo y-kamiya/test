@@ -4,14 +4,20 @@ public class CommandQuit extends Command {
 
     public boolean isEnd = true;
 
-	@Override
-	public boolean getIsEnd() {
-		return isEnd;
-	}
+    public String from;
 
-	@Override
+    public CommandQuit(String from) {
+        this.from = from;
+    }
+
+    @Override
+    public boolean getIsEnd() {
+        return isEnd;
+    }
+
+    @Override
     public void execute(ServerState serverState, Socket socket) {
-        // noop
+        serverState.broadcast(new MessageBroadcast(from, from + " exited"));
     }
 }
 

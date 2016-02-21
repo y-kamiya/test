@@ -9,7 +9,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class IOUtil {
-    
+
     public static final String CRLF = "\r\n";
 
     public static BufferedReader getBufferedReader(Socket socket) throws IOException {
@@ -21,18 +21,18 @@ public class IOUtil {
         OutputStream out = socket.getOutputStream();
         return new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
     }
-    
+
     public static void write(Socket socket, String message) throws IOException {
-    	BufferedWriter bw = IOUtil.getBufferedWriter(socket);
-    	bw.write(message);
-    	bw.flush();
+        BufferedWriter bw = IOUtil.getBufferedWriter(socket);
+        bw.write(message);
+        bw.flush();
     }
 
     public static void writeln(Socket socket, String message) throws IOException {
-    	IOUtil.write(socket, message + CRLF);
+        IOUtil.write(socket, message + CRLF);
     }
 
     public static String readLine(Socket socket) throws IOException {
-    	return IOUtil.getBufferedReader(socket).readLine();
+        return IOUtil.getBufferedReader(socket).readLine();
     }
 }

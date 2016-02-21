@@ -5,9 +5,9 @@ abstract public class Command {
 
     boolean isEnd = false;
 
-	public boolean getIsEnd() {
-		return isEnd;
-	}
+    public boolean getIsEnd() {
+        return isEnd;
+    }
 
     abstract public void execute(ServerState serverState, Socket socket) throws IOException;
 }

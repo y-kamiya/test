@@ -3,19 +3,17 @@ import java.net.Socket;
 
 public class CommandOther extends Command {
 
-	private String input;
-	
-	public CommandOther(String input) {
-		this.input = input;
-	}
+    private String from;
+    private String input;
 
-	@Override
+    public CommandOther(String from, String input) {
+        this.from = from;
+        this.input = input;
+    }
+
+    @Override
     public void execute(ServerState serverState, Socket socket) throws IOException {
-    	try {
-    		IOUtil.writeln(socket, input);
-    	} catch (NumberFormatException e) {
-    		IOUtil.writeln(socket, "input must be int");
-    	}
+        serverState.broadcast(new MessageBroadcast(from, input));
     }
 }
 
