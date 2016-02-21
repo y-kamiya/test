@@ -3,8 +3,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 public class ClientState {
 
-    private static final int QUEUE_MAX_SIZE = 1000;
-
     public String name;
     public Socket socket;
     public ArrayBlockingQueue<Message> queue;
