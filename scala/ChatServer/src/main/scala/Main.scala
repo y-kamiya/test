@@ -1,4 +1,4 @@
-package EchoServer
+package ChatServer
 
 import akka.actor.{ ActorSystem, Props }
 
