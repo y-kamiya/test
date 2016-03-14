@@ -10,10 +10,14 @@ class ChatHandler(list: List[ActorPath]) extends Actor {
   def receive = {
     case Received(data) => 
       sender() ! Write(data)
+      // var a = context.actorSelection(path)
+      println(list)
+      context.actorSelection("/user/server/*") ! "Message 1"
       list.foreach(path => {
-        context.actorSelection(path) ! "Message 1"
+        println(path)
       })
     case PeerClosed => context.stop(self)
+    case m:String => println(m)
   }
 }
 

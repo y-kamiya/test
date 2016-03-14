@@ -31,6 +31,9 @@ class Server extends Actor {
       println(command.failureMessage)
     case c @ Connected(remote, local) =>
       val handler = context.actorOf(Props(classOf[ChatHandler], serverState.clientList.toList))
+      println(remote)
+      println(local)
+      println(c)
       serverState.addClient(handler.path)
       sender() ! Register(handler)
 
