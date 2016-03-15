@@ -19,7 +19,7 @@ class Server extends Actor {
     case CommandFailed(command: Bind) =>
       println(command.failureMessage)
     case c @ Connected(remote, local) =>
-      val handler = context.actorOf(Props(classOf[ChatHandler]), sender())
+      val handler = context.actorOf(Props(classOf[ChatHandler], sender()))
       sender() ! Register(handler)
   }
 }

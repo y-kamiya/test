@@ -18,30 +18,33 @@ class ClientMap {
   }
 }
 
-trait Message
-case class NewClient(name: String) with Message
-case class Broadcast(name: String, msg: String) with Message
-case class Tell(name: String, msg: String) with Message
+trait ChatMessage
+case class NewClient(name: String) extends ChatMessage
+case class Broadcast(name: String, msg: String) extends ChatMessage
+case class Tell(name: String, msg: String) extends ChatMessage
 
 class ChatHandler(ref: ActorRef) extends Actor {
   import Tcp._
 
-  var clientName: String
+  var clientName: String = "undefined"
+  val clientMap = new ClientMap
+
+  confirmName
 
   def confirmName = {
-    ref ! Write("What your name?")
+    ref ! Write(ByteString("What your name?"))
   }
 
   def receive ={
     case name: String => 
       clientName = name
       clientMap.add(name, sender().path)
-      nofifyJoin(name)
-      become("loggedIn")
+      notifyJoin(name)
+      context.become(loggedIn)
   }
 
-  def loggedIn = {
-    case Received(data) => broadcast(clientName, data)
+  def loggedIn: Receive = {
+    case Received(data) => broadcast(clientName, data.decodeString("UTF-8"))
     case PeerClosed => context.stop(self)
     case Broadcast(name, str) => ref ! s"*** $name ***: $str"
   }
@@ -54,7 +57,7 @@ class ChatHandler(ref: ActorRef) extends Actor {
     nofifyAll(name, Broadcast(name, str))
   }
 
-  def nofifyAll(name: String, message: Message) {
+  def nofifyAll(name: String, message: ChatMessage) {
     context.actorSelection("/user/server/*") ! message
   }
 }
