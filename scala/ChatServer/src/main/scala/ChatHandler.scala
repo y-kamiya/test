@@ -28,18 +28,18 @@ class ChatHandler(ref: ActorRef) extends Actor {
 
   var clientName: String = "undefined"
   val clientMap = new ClientMap
+  val Crlf = "\r\n"
 
   confirmName
 
   def confirmName = {
-    ref ! Write(ByteString("What your name?\n"))
+    ref ! Write(ByteString(s"What your name?$Crlf"))
   }
 
   def receive = {
     case Received(name) =>
       println("receive name")
-      clientName = name.decodeString("UTF-8").init
-      println(clientName)
+      clientName = name.dropRight(2).utf8String
       clientMap.add(clientName, sender().path)
       notifyJoin(clientName)
       context.become(loggedIn)
@@ -52,7 +52,7 @@ class ChatHandler(ref: ActorRef) extends Actor {
     case PeerClosed => context.stop(self)
     case Broadcast(name, str) => 
       println("receive Broadcast")
-      ref ! Write(ByteString(name))
+      ref ! Write(ByteString(s"* $name *: $str$Crlf"))
   }
 
   def notifyJoin(name: String) {
