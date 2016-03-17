@@ -20,6 +20,7 @@ class ClientMap {
 
 trait ChatMessage
 case class NewClient(name: String) extends ChatMessage
+case class AckNewClient(name: String) extends ChatMessage
 case class Broadcast(name: String, msg: String) extends ChatMessage
 case class Tell(name: String, msg: String) extends ChatMessage
 
@@ -46,13 +47,22 @@ class ChatHandler(ref: ActorRef) extends Actor {
   }
 
   def loggedIn: Receive = {
-    case Received(data) => 
+    case Received(data) =>
       println("receive message")
       broadcast(clientName, data.decodeString("UTF-8").init)
     case PeerClosed => context.stop(self)
-    case Broadcast(name, str) => 
+    case Broadcast(name, str) =>
       println("receive Broadcast")
       ref ! Write(ByteString(s"* $name *: $str$Crlf"))
+    case NewClient(name) =>
+      clientMap.add(name, sender().path)
+      if (name != clientName) {
+        sender() ! AckNewClient(clientName)
+        ref ! Write(ByteString(s"greet from $name$Crlf"))
+      }
+    case AckNewClient(name) =>
+      clientMap.add(name, sender().path)
+      ref ! Write(ByteString(s"greet from $name$Crlf"))
   }
 
   def notifyJoin(name: String) {
