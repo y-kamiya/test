@@ -25,6 +25,7 @@ class ClientMap {
 trait ChatMessage
 case class NewClient(name: String) extends ChatMessage
 case class AckNewClient(name: String) extends ChatMessage
+case class RemoveClient(name: String) extends ChatMessage
 case class Broadcast(name: String, msg: String) extends ChatMessage
 case class Tell(name: String, msg: String) extends ChatMessage
 case class Notice(msg: String) extends ChatMessage
@@ -56,23 +57,21 @@ class ChatHandler(ref: ActorRef) extends Actor {
   def loggedIn: Receive = {
     case Received(data) =>
       println("receive message")
-      val str = data.decodeString("UTF-8").init
+      println(data)
+      val str = data.utf8String.stripLineEnd
       val commands = str.split(Separator).toList
+      println(commands)
       commands match {
-        case ":t" :: name :: list if !list.isEmpty =>
-          tell(name, list.mkString(Separator))
-        case ":t" :: name :: list => noop
+        case List(":t", name) => noop
+        case ":t" :: name :: list => tell(name, list.mkString(Separator))
+        case List(":q", _*)       => kick(clientName)
+        case List(":k", name, _*) => kick(name)
         case List(c, _*) if c.startsWith(":") =>
           notice(s"unknown command $c$Crlf")
         case List("") => noop
-        case _ => 
+        case _ =>
           broadcast(clientName, str)
       }
-      // commands(0) match {
-      //   case ":t" => tell(commands(1), commands(2))
-      //   case c if c.startsWith(":") => notice(s"unknown command $c$Crlf")
-      //   case _ => broadcast(clientName, str)
-      // }
     case PeerClosed => context.stop(self)
     case Broadcast(name, str) =>
       println("receive Broadcast")
@@ -92,9 +91,26 @@ class ChatHandler(ref: ActorRef) extends Actor {
     case Notice(str) =>
       println("receive Notice")
       respondToClient(s"<notice> $str$Crlf")
+    case RemoveClient(name) if name == clientName =>
+      println("receive RemoveClient to me")
+      context.stop(self)
+    case RemoveClient(name) =>
+      println(ByteString(name))
+      println(ByteString(clientName))
+      println(name == clientName)
+      if (name == clientName) {
+        context.stop(self)
+      }
+      println("receive RemoveClient")
+      clientMap.remove(name)
+    case m => println(s"unknown message $m")
   }
 
   def noop() {
+  }
+
+  def kick(name: String) {
+    notifyAll(RemoveClient(name))
   }
 
   def respondToClient(str: String) {
@@ -102,14 +118,14 @@ class ChatHandler(ref: ActorRef) extends Actor {
   }
 
   def notifyJoin(name: String) {
-    nofifyAll(name, NewClient(name))
+    notifyAll(NewClient(name))
   }
 
   def broadcast(name: String, str: String) {
-    nofifyAll(name, Broadcast(name, str))
+    notifyAll(Broadcast(name, str))
   }
 
-  def nofifyAll(name: String, message: ChatMessage) {
+  def notifyAll(message: ChatMessage) {
     context.actorSelection("/user/server/*") ! message
   }
 
