@@ -11,7 +11,6 @@ class Server extends Actor {
   import context.system
 
   IO(Tcp) ! Bind(self, new InetSocketAddress("localhost", 8011))
-  // var serverState = new ServerState
 
   def receive = {
     case b @ Bound(localAddress) =>
@@ -23,13 +22,3 @@ class Server extends Actor {
       sender() ! Register(handler)
   }
 }
-
-// class NotifyingServer extends Actor {
-//   var serverState: ServerState = new ServerState
-//
-//   def receive = {
-//     case AddClient(path: ActorPath) =>
-//     case RemoveClient(path: ActorPath) =>
-//   }
-// }
-

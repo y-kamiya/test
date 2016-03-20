@@ -36,14 +36,10 @@ class ChatHandler(ref: ActorRef) extends Actor {
   val Crlf = "\r\n"
   val Separator = " "
 
-  var clientName: String = "undefined"
+  var clientName = "undefined"
   val clientMap = new ClientMap
 
-  confirmName
-
-  def confirmName = {
-    ref ! Write(ByteString(s"What your name?$Crlf"))
-  }
+  respondToClient(s"What your name?$Crlf")
 
   def receive = {
     case Received(name) =>
@@ -75,16 +71,16 @@ class ChatHandler(ref: ActorRef) extends Actor {
     case PeerClosed => context.stop(self)
     case Broadcast(name, str) =>
       println("receive Broadcast")
-      ref ! Write(ByteString(s"* $name *: $str$Crlf"))
+      respondToClient(s"* $name *: $str$Crlf")
     case NewClient(name) =>
       clientMap.add(name, sender().path)
       if (name != clientName) {
         sender() ! AckNewClient(clientName)
-        ref ! Write(ByteString(s"greet from $name$Crlf"))
+        respondToClient(s"greet from $name$Crlf")
       }
     case AckNewClient(name) =>
       clientMap.add(name, sender().path)
-      ref ! Write(ByteString(s"greet from $name$Crlf"))
+      respondToClient(s"greet from $name$Crlf")
     case Tell(name, str) =>
       println("receive Tell")
       respondToClient(s"** $name **: $str$Crlf")
@@ -95,12 +91,6 @@ class ChatHandler(ref: ActorRef) extends Actor {
       println("receive RemoveClient to me")
       context.stop(self)
     case RemoveClient(name) =>
-      println(ByteString(name))
-      println(ByteString(clientName))
-      println(name == clientName)
-      if (name == clientName) {
-        context.stop(self)
-      }
       println("receive RemoveClient")
       clientMap.remove(name)
     case m => println(s"unknown message $m")
