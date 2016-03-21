@@ -42,7 +42,6 @@ case class AckNewClient(name: String) extends ChatMessage
 case class RemoveClient(name: String) extends ChatMessage
 case class Broadcast(name: String, msg: String) extends ChatMessage
 case class Tell(name: String, msg: String) extends ChatMessage
-case class Notice(msg: String) extends ChatMessage
 case class NameConfirmation(name: String) extends ChatMessage
 case class AckNameConfirmation(name: String, isOk: Boolean) extends ChatMessage
 
@@ -134,10 +133,7 @@ class ChatHandler(ref: ActorRef, memberCount: Int) extends Actor {
     case Tell(name, str) =>
       println("receive Tell")
       respondToClient(s"** $name **: $str$Crlf")
-    case Notice(str) =>
-      println("receive Notice")
-      respondToClient(s"<notice> $str$Crlf")
-    case RemoveClient(name) if name == clientName =>
+    case RemoveClient(name) if sender == self =>
       println("receive RemoveClient to me")
       context.stop(self)
     case RemoveClient(name) =>
@@ -176,9 +172,9 @@ class ChatHandler(ref: ActorRef, memberCount: Int) extends Actor {
     }
   }
 
-  def notice(str: String) {
-    self ! Notice(str)
-  }
+  def notice(str: String) = respondToClient(s"<notice> $str$Crlf")
+
+  def info(str: String) = println(str)
 }
 
 
