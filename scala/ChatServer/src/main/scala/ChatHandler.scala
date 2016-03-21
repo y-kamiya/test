@@ -86,6 +86,7 @@ class ChatHandler(ref: ActorRef, memberCount: Int) extends Actor {
   def failedToNameDecision {
     println(s"failed $clientName")
     context.setReceiveTimeout(Duration.Undefined)
+    parent ! RemoveClient(name)
     respondToClient(s"$clientName has already used$Crlf")
     self ! PoisonPill
   }
@@ -149,6 +150,7 @@ class ChatHandler(ref: ActorRef, memberCount: Int) extends Actor {
 
   def kick(name: String) {
     notifyAll(RemoveClient(name))
+    parent ! RemoveClient(name)
   }
 
   def respondToClient(str: String) {
