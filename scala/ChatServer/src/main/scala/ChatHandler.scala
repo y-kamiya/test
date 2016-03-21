@@ -125,20 +125,22 @@ class ChatHandler(ref: ActorRef, memberCount: Int) extends Actor {
       clientMap.update(name, sender().path)
       if (name != clientName) {
         sender() ! AckNewClient(clientName)
-        respondToClient(s"greet from $name$Crlf")
+        notice(s"$name joined$Crlf")
       }
     case AckNewClient(name) =>
       clientMap.add(name, sender().path)
-      respondToClient(s"greet from $name$Crlf")
+      notice(s"greet from $name$Crlf")
     case Tell(name, str) =>
       println("receive Tell")
       respondToClient(s"** $name **: $str$Crlf")
-    case RemoveClient(name) if sender == self =>
+    case RemoveClient(name) if name == clientName =>
       println("receive RemoveClient to me")
-      context.stop(self)
+      notice(s"you are kicked$Crlf")
+      self ! PoisonPill
     case RemoveClient(name) =>
       println("receive RemoveClient")
       clientMap.remove(name)
+      notice(s"$name exited$Crlf")
     case m => println(s"unknown message $m")
   }
 
@@ -172,7 +174,7 @@ class ChatHandler(ref: ActorRef, memberCount: Int) extends Actor {
     }
   }
 
-  def notice(str: String) = respondToClient(s"<notice> $str$Crlf")
+  def notice(str: String) = respondToClient(s"<notice> $str")
 
   def info(str: String) = println(str)
 }
