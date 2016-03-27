@@ -14,11 +14,12 @@ class Server(val port: Int) {
     val exec = Executors.newFixedThreadPool(MAX_THREAD_NUM);
     val server = new ServerSocket(port);
     try {
-      while (true) {
-        println("wait accept");
-        val socket = server.accept();
-        exec.submit(new EchoRunnable(socket));
-      }
+      println(s"wait accept on port: $port")
+      Iterator
+        .continually(server.accept)
+        .foreach { socket =>
+          exec.submit(new EchoRunnable(socket))
+        }
     } finally {
       exec.shutdown()
     }
@@ -27,21 +28,24 @@ class Server(val port: Int) {
 
 class EchoRunnable(socket: Socket) extends Runnable {
 
-  final val COMMAND_QUIT = ":q"
+  final val CommandQuit = ":q"
+  final val Crlf = "\r\n"
 
   def run {
     val br = new BufferedReader(new InputStreamReader(socket.getInputStream, StandardCharsets.UTF_8))
     val bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream, StandardCharsets.UTF_8))
-    var isContinue = true
-    while (isContinue) {
-      println("wait input")
-      var str = br.readLine
-      str match {
-        case COMMAND_QUIT => bw.write("quit.\n"); isContinue = false
-        case m: String => bw.write(m + "\n")
-      }
-      bw.flush
+    println("wait input")
+    try {
+      Iterator
+        .continually(br.readLine)
+        .takeWhile(str => str != CommandQuit)
+        .withFilter(!_.isEmpty)
+        .foreach { str =>
+          bw.write(str + Crlf)
+          bw.flush
+        }
+    } finally {
+      socket.close
     }
-    socket.close
   }
 }
