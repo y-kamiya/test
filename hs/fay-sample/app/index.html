@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+</head>
+<body>
+  <h1>Fay</h1>
+  <div class="fieldSize">
+      row: <input type="number" id="rowNum" value="5">
+      colomn: <input type="number" id="colNum" value="5">
+  </div>
+  <div id="field"></div>
+  <div id="buttons">
+      <div>
+          <button id='createTableButton' class="btn btn-lg btn-primary">Create Field</button>
+      </div>
+      <div class="disabled">
+          <button id="solve" class="btn btn-lg btn-primary">solve</button>
+      </div>
+      <div class="cursor disabled">
+          <div>
+              <span id='cursor-up' class="arrow-primary btn btn-lg"></span>
+          </div>
+          <div>
+              <span id='cursor-left' class="arrow-primary btn btn-lg" data-angle='270'></span>
+              <span id='cursor-right' class="arrow-primary btn btn-lg" data-angle='90'></span>
+          </div>
+          <div>
+              <span id='cursor-down' class="arrow-primary btn btn-lg" data-angle='180'></span>
+          </div>
+      </div>
+  <div>
+      <div id="input"></div>
+  </div>
+  <script src='jquery.min.js' type='text/javascript'></script>
+  <script src='Main.js' type='text/javascript'></script>
+  <script src={{ url("assets/js/bootstrap-arrows.js") }}></script>
+  <script>
+      $(function() { $('.arrow, [class^=arrow-]').bootstrapArrows(); });
+  </script>
+@endsection
+</body>
+</html>
+
