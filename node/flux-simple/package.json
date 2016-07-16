@@ -1,0 +1,22 @@
+{
+  "name": "flux-simple",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "browserify -d -e src/Main.js -t [ babelify --loose es6.classes ] -o app.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+      "babel": "^5.1.11",
+      "babel-core": "^5.1.11",
+      "babel-plugin-espower": "^0.2.1",
+      "babelify": "^6.0.2",
+      "browserify": "^9.0.8"
+  },
+  "dependencies": {
+      "react": "^0.13.1"
+  }
+}
