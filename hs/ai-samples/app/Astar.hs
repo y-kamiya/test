@@ -7,6 +7,9 @@ data NodeType = Road | Wall deriving Show
 data Node = Node Pos NodeType deriving Show
 type Field = M.Map Pos Node
 
+data NodeState = NodeState Int Int Int
+data FieldState = M.Map Pos FieldState
+
 fieldSample = 
   [ "#######"
   , "#.....#"
@@ -40,10 +43,17 @@ mkField input = convert (zip [0..] $ concat input) M.empty
         m = length input
 
 searchPath :: Field -> Pos -> Pos -> [Pos]
-searchPath field startPos goalPos = searchNext [startPos] []
+searchPath field startPos goalPos = searchNext [startPos] [] [] M.empty
   where
-    searchNext :: [Pos] -> [Pos] -> [Pos]
-    searchNext openList closeList = 
+    searchNext :: [Pos] -> [Pos] -> [Pos] -> FieldState -> [Pos]
+    searchNext [] _ path _ -> path
+    searchNext (pos:rest) closeList path fieldState = 
+    // this logic cant introduce correct path
+      let nextOpens = getNextOpens pos
+          closed = pos:closeList
+          newPath = head nextOpens : path
+          newFieldState = updateFieldState nextOpens
+      in searchNext (rest ++ nextOpens) closed newPath newFieldState
 
 
 
