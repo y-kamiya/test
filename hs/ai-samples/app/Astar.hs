@@ -1,14 +1,16 @@
 module Main where
 
 import qualified Data.Map as M
+import qualified Data.List.Ordered as OL
 
-data Pos = Pos (Int, Int) deriving (Show, Eq, Ord)
+data Pos = Pos (Int, Int) | NonePos deriving (Show, Eq, Ord)
 data NodeType = Road | Wall deriving Show
 data Node = Node Pos NodeType deriving Show
 type Field = M.Map Pos Node
 
-data NodeState = NodeState Int Int Int
-data FieldState = M.Map Pos FieldState
+data NodeState = Open | Close
+data NodeInfo = NodeInfo NodeState Int Int Int Pos
+data FieldState = M.Map Pos NodeInfo
 
 fieldSample = 
   [ "#######"
@@ -42,13 +44,12 @@ mkField input = convert (zip [0..] $ concat input) M.empty
         n = length $ head input
         m = length input
 
-searchPath :: Field -> Pos -> Pos -> [Pos]
-searchPath field startPos goalPos = searchNext [startPos] [] [] M.empty
+searchPath :: Field -> Pos -> Pos -> FieldState
+searchPath field startPos goalPos = searchNext [startPos] $ M.insert startPos (NodeInfo Open 0 0 0 NonePos) M.empty
   where
-    searchNext :: [Pos] -> [Pos] -> [Pos] -> FieldState -> [Pos]
-    searchNext [] _ path _ -> path
-    searchNext (pos:rest) closeList path fieldState = 
-    // this logic cant introduce correct path
+    searchNext :: [Pos] -> FieldState -> FieldState
+    searchNext [] field -> field
+    searchNext (pos:rest) fieldState = 
       let nextOpens = getNextOpens pos
           closed = pos:closeList
           newPath = head nextOpens : path
