@@ -2,6 +2,7 @@ module Main where
 
 import qualified Data.Map as M
 import qualified Data.List.Ordered as OL
+import Data.Maybe
 
 data Pos = Pos (Int, Int) | NonePos deriving (Show, Eq, Ord)
 data NodeType = Road | Wall deriving Show
@@ -49,13 +50,22 @@ searchPath field startPos goalPos = searchNext [startPos] $ M.insert startPos (N
   where
     searchNext :: [Pos] -> FieldState -> FieldState
     searchNext [] field -> field
-    searchNext (pos:rest) fieldState = 
+    searchNext (current:rest) fieldState = 
       let nextOpens = getNextOpens pos
-          closed = pos:closeList
-          newPath = head nextOpens : path
-          newFieldState = updateFieldState nextOpens
-      in searchNext (rest ++ nextOpens) closed newPath newFieldState
+          newFieldState = updateFieldState current
+      in searchNext (rest ++ nextOpens) newFieldState
 
+getExistingNextNodes :: Field -> FieldState -> Pos -> [Node]
+getExistingNextNodes field fieldState pos = let nextPos = getNextPosList pos
+                                                existingPos = filter (\pos -> M.member pos field) nextPos
+                                            in  map (Maybe.fromJust . flip M.lookup field) existingPos 
+
+-- getNewOpenNodes :: Field -> FieldState -> Pos -> [Node]
+-- getNewOpenNodes field fieldState pos = let nextNodes = getNextNodes pos
+--                                        in  firstPos = filter (\pos -> M.notMember pos fieldState) existingPos
+
+getNextPosList :: Pos -> [Pos]
+getNextPosList Pos (x, y) = [Pos (x,y+1), Pos (x+1,y), Pos (x,y-1), Pos (x-1,y)]
 
 
 
