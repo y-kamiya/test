@@ -6,11 +6,18 @@ import Data.Maybe
 
 data Pos = Pos (Int, Int) | NonePos deriving (Show, Eq, Ord)
 data NodeType = Road | Wall deriving Show
-data Node = Node Pos NodeType deriving Show
+data Node = Node { pos :: Pos
+                 , nodeType :: NodeType
+                 } deriving Show
 type Field = M.Map Pos Node
 
 data NodeState = Open | Close
-data NodeInfo = NodeInfo NodeState Int Int Int Pos
+data NodeInfo = NodeInfo { nodeState :: NodeState
+                         , realCost :: Int
+                         , estimateCost :: Int
+                         , score :: Int
+                         , pos ::  Pos
+                         }
 data FieldState = M.Map Pos NodeInfo
 
 fieldSample = 
@@ -51,24 +58,25 @@ searchPath field startPos goalPos = searchNext [startPos] $ M.insert startPos (N
     searchNext :: [Pos] -> FieldState -> FieldState
     searchNext [] field -> field
     searchNext (current:rest) fieldState = 
-      let nextOpens = getNextOpens pos
-          newFieldState = updateFieldState current
+      let nextOpens = getNewOpenNodes field fieldState current
+          newFieldState = updateFieldState field fieldState current
       in searchNext (rest ++ nextOpens) newFieldState
 
 getExistingNextNodes :: Field -> FieldState -> Pos -> [Node]
 getExistingNextNodes field fieldState pos = let nextPos = getNextPosList pos
                                                 existingPos = filter (\pos -> M.member pos field) nextPos
-                                            in  map (Maybe.fromJust . flip M.lookup field) existingPos 
+                                                existingNodes = map (Maybe.fromJust . flip M.lookup field) existingPos 
+                                            in  filter (\node -> nodeType node == Road) existingNodes
 
--- getNewOpenNodes :: Field -> FieldState -> Pos -> [Node]
--- getNewOpenNodes field fieldState pos = let nextNodes = getNextNodes pos
---                                        in  firstPos = filter (\pos -> M.notMember pos fieldState) existingPos
+getNewOpenNodes :: Field -> FieldState -> Pos -> [Node]
+getNewOpenNodes field fieldState current = let nodes = getExistingNextNodes field current
+                                       in  filter (\node -> M.notMember (pos node) fieldState) nodes
 
 getNextPosList :: Pos -> [Pos]
-getNextPosList Pos (x, y) = [Pos (x,y+1), Pos (x+1,y), Pos (x,y-1), Pos (x-1,y)]
+getNextPosList (Pos (x, y)) = [Pos (x,y+1), Pos (x+1,y), Pos (x,y-1), Pos (x-1,y)]
 
-
-
+updateFieldState :: Field -> FieldState -> Pos -> [Node]
+updateFieldState field fieldState current = let nodes = getExistingNextNodes field current
 
 
 
