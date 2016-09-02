@@ -67,8 +67,14 @@ searchPath field startPos goalPos = searchNext [startPos] $ M.insert startPos (N
     searchNext [] field -> field
     searchNext (current:rest) fieldState = 
       let nextOpens = getNewOpenNodes field fieldState current
+          openList = buildOpenList nextOpens rest
           newFieldState = updateFieldState field fieldState current
-      in searchNext (rest ++ nextOpens) newFieldState
+      in searchNext openList newFieldState
+
+buildOpenList :: [Node] -> [Pos] -> [Pos]
+buildOpenList [] posList = posList
+buildOpenList (node:rest) posList = let list = OL.insertSet (pos node) posList
+                                    in  buildOpenList rest list
 
 getExistingNextNodes :: Field -> FieldState -> Pos -> [Node]
 getExistingNextNodes field fieldState pos = let nextPos = getNextPosList pos
@@ -78,7 +84,7 @@ getExistingNextNodes field fieldState pos = let nextPos = getNextPosList pos
 
 getNewOpenNodes :: Field -> FieldState -> Pos -> [Node]
 getNewOpenNodes field fieldState current = let nodes = getExistingNextNodes field current
-                                       in  filter (\node -> M.notMember (pos node) fieldState) nodes
+                                           in  filter (\node -> M.notMember (pos node) fieldState) nodes
 
 getNextPosList :: Pos -> [Pos]
 getNextPosList (Pos (x, y)) = [Pos (x,y+1), Pos (x+1,y), Pos (x,y-1), Pos (x-1,y)]
@@ -102,7 +108,15 @@ buildNodeInfo nodePos goalPos currentCost = let real = calcRealCost currentCost
     calcRealCost = (+ 1)
 
 mergeFieldState :: FieldState -> FieldState -> FieldState
-mergeFieldState stateOld stateNew = undefined
+mergeFieldState fsOld fsNew = M.unionWith combine fsOld fsNew
+  where
+    combine :: NodeState -> NodeState -> NodeState
+    combine nsOld nsNew
+      | score nsOld > score nsNew = nsNew
+      | score nsOld <= score nsNew = nsOld
+      | otherwise = case realCost nsOld <= realCost nsNew of
+                      True -> nsOld
+                      False -> nsNew
 
 
 
