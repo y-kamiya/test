@@ -48,7 +48,8 @@ main :: IO ()
 main = do
     printField
     let field = mkField fieldSample
-    print $ M.lookup (Pos (1,4)) field
+    printMap field
+    print "\n-----------------------------------------"
     printMap $ searchPath field (findStartPos field)
 
 mkField :: [String] -> Field
@@ -62,9 +63,8 @@ mkField input = convert (zip [0..] $ concat input) M.empty
       | c == '.'  = convert ts $ M.insert pos (Node pos Road) field
       | otherwise = convert ts $ M.insert pos (Node pos Wall) field
       where
-        pos = Pos (id `mod` n, id `div` m)
-        n = length $ head input
-        m = length input
+        pos = Pos (id `mod` col, id `div` col)
+        col = length $ head input
 
 searchPath :: Field -> Pos -> FieldState
 searchPath field startPos = searchNext [startPos] $ buildInitialState field startPos
@@ -78,7 +78,7 @@ searchPath field startPos = searchNext [startPos] $ buildInitialState field star
       in searchNext openList newFieldState
 
     buildInitialState :: Field -> Pos -> FieldState
-    buildInitialState field startPos = let nodeInfo = buildNodeInfo NonePos startPos (findGoalPos field) 0
+    buildInitialState field startPos = let nodeInfo = buildNodeInfo NonePos startPos (findGoalPos field) (-1)
                                        in  M.insert startPos nodeInfo M.empty
 
 buildOpenList :: [Node] -> [Pos] -> [Pos]
