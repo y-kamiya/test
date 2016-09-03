@@ -34,6 +34,7 @@ executable astar-exe
   build-depends:       base
                      , ai-samples
                      , containers
+                     , data-ordlist
   default-language:    Haskell2010
 
 test-suite ai-samples-test

@@ -2,10 +2,10 @@ module Main where
 
 import qualified Data.Map as M
 import qualified Data.List.Ordered as OL
-import Data.Maybe
+import qualified Data.Maybe as MB
 
 data Pos = Pos (Int, Int) | NonePos deriving (Show, Eq, Ord)
-data NodeType = Road | Wall | Start | Goal deriving Show
+data NodeType = Road | Wall | Start | Goal deriving (Show, Eq)
 data Node = Node { pos :: Pos
                  , nodeType :: NodeType
                  } deriving Show
@@ -16,9 +16,9 @@ data NodeInfo = NodeInfo { nodeState :: NodeState
                          , realCost :: Int
                          , estimateCost :: Int
                          , score :: Int
-                         , pos ::  Pos
                          } deriving Show
-data FieldState = M.Map Pos NodeInfo
+
+type FieldState = M.Map Pos NodeInfo
 
 fieldSample = 
   [ "#######"
@@ -30,20 +30,20 @@ fieldSample =
   ]
 
 findStartPos :: Field -> Pos
-findStartPos field = case M.filter (== Node _ Start) field of
-                       M.singleton pos _ -> pos
-                       otherwise -> NonePos
+findStartPos field = let ((_, node):_) = M.toList $ M.filter (\node -> nodeType node == Start) field
+                     in pos node
 
 findGoalPos :: Field -> Pos
-findGoalPos field = case M.filter (== Node _ Goal) field of
-                       M.singleton pos _ -> pos
-                       otherwise -> NonePos
+findGoalPos field = let ((_, node):_) = M.toList $ M.filter (\node -> nodeType node == Goal) field
+                    in pos node
 
 printField :: IO ()
 printField = mapM_ print fieldSample
 
 main :: IO ()
-main = print $ M.lookup (Pos (1,1)) $ mkField fieldSample
+main = do
+    let field = mkField fieldSample
+    print $ searchPath field (findStartPos field)
 
 mkField :: [String] -> Field
 mkField input = convert (zip [0..] $ concat input) M.empty
@@ -60,11 +60,11 @@ mkField input = convert (zip [0..] $ concat input) M.empty
         n = length $ head input
         m = length input
 
-searchPath :: Field -> Pos -> Pos -> FieldState
-searchPath field startPos goalPos = searchNext [startPos] $ M.insert startPos (NodeInfo Open 0 0 0 NonePos) M.empty
+searchPath :: Field -> Pos -> FieldState
+searchPath field startPos = searchNext [startPos] $ M.insert startPos (NodeInfo Open 0 0 0) M.empty
   where
     searchNext :: [Pos] -> FieldState -> FieldState
-    searchNext [] field -> field
+    searchNext [] field = field
     searchNext (current:rest) fieldState = 
       let nextOpens = getNewOpenNodes field fieldState current
           openList = buildOpenList nextOpens rest
@@ -76,11 +76,11 @@ buildOpenList [] posList = posList
 buildOpenList (node:rest) posList = let list = OL.insertSet (pos node) posList
                                     in  buildOpenList rest list
 
-getExistingNextNodes :: Field -> FieldState -> Pos -> [Node]
-getExistingNextNodes field fieldState pos = let nextPos = getNextPosList pos
-                                                existingPos = filter (\pos -> M.member pos field) nextPos
-                                                existingNodes = map (Maybe.fromJust . flip M.lookup field) existingPos 
-                                            in  filter (\node -> nodeType node == Road) existingNodes
+getExistingNextNodes :: Field -> Pos -> [Node]
+getExistingNextNodes field pos = let nextPos = getNextPosList pos
+                                     existingPos = filter (\pos -> M.member pos field) nextPos
+                                     existingNodes = map (MB.fromJust . flip M.lookup field) existingPos 
+                                 in  filter (\node -> nodeType node == Road) existingNodes
 
 getNewOpenNodes :: Field -> FieldState -> Pos -> [Node]
 getNewOpenNodes field fieldState current = let nodes = getExistingNextNodes field current
@@ -91,15 +91,15 @@ getNextPosList (Pos (x, y)) = [Pos (x,y+1), Pos (x+1,y), Pos (x,y-1), Pos (x-1,y
 
 updateFieldState :: Field -> FieldState -> Pos -> FieldState
 updateFieldState field fieldState current = let nodes = getExistingNextNodes field current
-                                                currentNodeState = Maybe.fromJust $ M.lookup current fieldState
+                                                currentNodeState = MB.fromJust $ M.lookup current fieldState
                                                 goalPos = findGoalPos field
-                                                newNodes = M.fromList $ map (\node -> ((pos node), buildNodeInfo (pos node) goalPos (realCost currentNodeState))) nodes
+                                                newFieldState = M.fromList $ map (\node -> ((pos node), buildNodeInfo (pos node) goalPos (realCost currentNodeState))) nodes
                                             in  mergeFieldState fieldState newFieldState
 
 buildNodeInfo :: Pos -> Pos -> Int -> NodeInfo
 buildNodeInfo nodePos goalPos currentCost = let real = calcRealCost currentCost
                                                 estimate = calcEstimateCost nodePos goalPos
-                                            in  NodeInfo Open real estimate (real + estimate) nodePos
+                                            in  NodeInfo Open real estimate (real + estimate)
   where
     calcEstimateCost :: Pos -> Pos -> Int
     calcEstimateCost (Pos (x1, y1)) (Pos (x2, y2)) = abs (x2 - x1) + abs (y2 - y1)
@@ -110,7 +110,7 @@ buildNodeInfo nodePos goalPos currentCost = let real = calcRealCost currentCost
 mergeFieldState :: FieldState -> FieldState -> FieldState
 mergeFieldState fsOld fsNew = M.unionWith combine fsOld fsNew
   where
-    combine :: NodeState -> NodeState -> NodeState
+    combine :: NodeInfo -> NodeInfo -> NodeInfo
     combine nsOld nsNew
       | score nsOld > score nsNew = nsNew
       | score nsOld <= score nsNew = nsOld
