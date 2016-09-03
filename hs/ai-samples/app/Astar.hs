@@ -90,7 +90,12 @@ getExistingNextNodes :: Field -> Pos -> [Node]
 getExistingNextNodes field pos = let nextPos = getNextPosList pos
                                      existingPos = filter (\pos -> M.member pos field) nextPos
                                      existingNodes = map (MB.fromJust . flip M.lookup field) existingPos 
-                                 in  filter (\node -> nodeType node == Road) existingNodes
+                                 in  filter isRoad existingNodes
+  where
+    isRoad :: Node -> Bool
+    isRoad (Node _ Road) = True
+    isRoad (Node _ Goal) = True
+    isRoad _ = False
 
 getNewOpenNodes :: Field -> FieldState -> Pos -> [Node]
 getNewOpenNodes field fieldState currentPos = let nodes = getExistingNextNodes field currentPos
