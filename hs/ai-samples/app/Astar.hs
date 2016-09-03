@@ -13,6 +13,7 @@ type Field = M.Map Pos Node
 
 data NodeState = Open | Close deriving Show
 data NodeInfo = NodeInfo { nodeState :: NodeState
+                         , parentPos :: Pos
                          , realCost :: Int
                          , estimateCost :: Int
                          , score :: Int
@@ -61,15 +62,19 @@ mkField input = convert (zip [0..] $ concat input) M.empty
         m = length input
 
 searchPath :: Field -> Pos -> FieldState
-searchPath field startPos = searchNext [startPos] $ M.insert startPos (NodeInfo Open 0 0 0) M.empty
+searchPath field startPos = searchNext [startPos] $ buildInitialState field startPos
   where
     searchNext :: [Pos] -> FieldState -> FieldState
     searchNext [] field = field
-    searchNext (current:rest) fieldState = 
-      let nextOpens = getNewOpenNodes field fieldState current
+    searchNext (currentPos:rest) fieldState = 
+      let nextOpens = getNewOpenNodes field fieldState currentPos
           openList = buildOpenList nextOpens rest
-          newFieldState = updateFieldState field fieldState current
+          newFieldState = updateFieldState field fieldState currentPos
       in searchNext openList newFieldState
+
+    buildInitialState :: Field -> Pos -> FieldState
+    buildInitialState field startPos = let nodeInfo = buildNodeInfo NonePos startPos (findGoalPos field) 0
+                                       in  M.insert startPos nodeInfo M.empty
 
 buildOpenList :: [Node] -> [Pos] -> [Pos]
 buildOpenList [] posList = posList
@@ -83,23 +88,31 @@ getExistingNextNodes field pos = let nextPos = getNextPosList pos
                                  in  filter (\node -> nodeType node == Road) existingNodes
 
 getNewOpenNodes :: Field -> FieldState -> Pos -> [Node]
-getNewOpenNodes field fieldState current = let nodes = getExistingNextNodes field current
-                                           in  filter (\node -> M.notMember (pos node) fieldState) nodes
+getNewOpenNodes field fieldState currentPos = let nodes = getExistingNextNodes field currentPos
+                                              in  filter (\node -> M.notMember (pos node) fieldState) nodes
 
 getNextPosList :: Pos -> [Pos]
 getNextPosList (Pos (x, y)) = [Pos (x,y+1), Pos (x+1,y), Pos (x,y-1), Pos (x-1,y)]
 
 updateFieldState :: Field -> FieldState -> Pos -> FieldState
-updateFieldState field fieldState current = let nodes = getExistingNextNodes field current
-                                                currentNodeState = MB.fromJust $ M.lookup current fieldState
-                                                goalPos = findGoalPos field
-                                                newFieldState = M.fromList $ map (\node -> ((pos node), buildNodeInfo (pos node) goalPos (realCost currentNodeState))) nodes
-                                            in  mergeFieldState fieldState newFieldState
+updateFieldState field fieldState currentPos = M.update toClose currentPos $ mergeFieldState fieldState newFieldState
+  where
+    nodes = getExistingNextNodes field currentPos
+    currentNodeState = MB.fromJust $ M.lookup currentPos fieldState
+    goalPos = findGoalPos field
+    newFieldState = M.fromList $ map build nodes
 
-buildNodeInfo :: Pos -> Pos -> Int -> NodeInfo
-buildNodeInfo nodePos goalPos currentCost = let real = calcRealCost currentCost
-                                                estimate = calcEstimateCost nodePos goalPos
-                                            in  NodeInfo Open real estimate (real + estimate)
+    -- bulid :: Node -> (Pos, NodeInfo)
+    build node = (pos node, buildNodeInfo currentPos (pos node) goalPos (realCost currentNodeState))
+
+    toClose :: NodeInfo -> Maybe NodeInfo
+    toClose nodeInfo = Just $ nodeInfo { nodeState = Close }
+       
+
+buildNodeInfo :: Pos -> Pos -> Pos -> Int -> NodeInfo
+buildNodeInfo parentPos nodePos goalPos currentCost = let real = calcRealCost currentCost
+                                                          estimate = calcEstimateCost nodePos goalPos
+                                                      in  NodeInfo Open parentPos real estimate (real + estimate)
   where
     calcEstimateCost :: Pos -> Pos -> Int
     calcEstimateCost (Pos (x1, y1)) (Pos (x2, y2)) = abs (x2 - x1) + abs (y2 - y1)
@@ -108,7 +121,7 @@ buildNodeInfo nodePos goalPos currentCost = let real = calcRealCost currentCost
     calcRealCost = (+ 1)
 
 mergeFieldState :: FieldState -> FieldState -> FieldState
-mergeFieldState fsOld fsNew = M.unionWith combine fsOld fsNew
+mergeFieldState = M.unionWith combine
   where
     combine :: NodeInfo -> NodeInfo -> NodeInfo
     combine nsOld nsNew
