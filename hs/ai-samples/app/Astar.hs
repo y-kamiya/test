@@ -41,10 +41,15 @@ findGoalPos field = let ((_, node):_) = M.toList $ M.filter (\node -> nodeType n
 printField :: IO ()
 printField = mapM_ print fieldSample
 
+printMap :: (Show a, Show b) => M.Map a b -> IO ()
+printMap aMap = mapM_ print $ M.toList aMap
+
 main :: IO ()
 main = do
+    printField
     let field = mkField fieldSample
-    print $ searchPath field (findStartPos field)
+    print $ M.lookup (Pos (1,4)) field
+    printMap $ searchPath field (findStartPos field)
 
 mkField :: [String] -> Field
 mkField input = convert (zip [0..] $ concat input) M.empty
@@ -57,7 +62,7 @@ mkField input = convert (zip [0..] $ concat input) M.empty
       | c == '.'  = convert ts $ M.insert pos (Node pos Road) field
       | otherwise = convert ts $ M.insert pos (Node pos Wall) field
       where
-        pos = Pos (id `div` m, id `mod` n)
+        pos = Pos (id `mod` n, id `div` m)
         n = length $ head input
         m = length input
 
@@ -102,7 +107,7 @@ updateFieldState field fieldState currentPos = M.update toClose currentPos $ mer
     goalPos = findGoalPos field
     newFieldState = M.fromList $ map build nodes
 
-    -- bulid :: Node -> (Pos, NodeInfo)
+    build :: Node -> (Pos, NodeInfo)
     build node = (pos node, buildNodeInfo currentPos (pos node) goalPos (realCost currentNodeState))
 
     toClose :: NodeInfo -> Maybe NodeInfo
