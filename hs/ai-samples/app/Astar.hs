@@ -40,7 +40,7 @@ findGoalPos field = let ((_, node):_) = M.toList $ M.filter (\node -> nodeType n
                     in pos node
 
 printField :: [String] -> IO ()
-printField ss = mapM_ print ss
+printField = mapM_ print
 
 printMap :: (Show a, Show b) => M.Map a b -> IO ()
 printMap aMap = mapM_ print $ M.toList aMap
@@ -51,9 +51,20 @@ main = do
     contents <- lines <$> readFile path
     printField contents
     let field = mkField contents
-    printMap field
-    print "\n-----------------------------------------"
-    printMap $ searchPath field (findStartPos field)
+    -- printMap field
+    print "-----FieldState -----------------------------------"
+    let fieldState = calculateScore field (findStartPos field)
+    printMap fieldState 
+    print "---- Path -------------------------------------"
+    mapM_ print $ findPath field fieldState
+
+findPath :: Field -> FieldState -> [NodeInfo]
+findPath field fieldState = buildPath [] $ findGoalPos field
+  where
+    buildPath :: [NodeInfo] -> Pos -> [NodeInfo]
+    buildPath list NonePos = list
+    buildPath list currentPos = let nodeInfo = MB.fromJust $ M.lookup currentPos fieldState
+                                in  buildPath (nodeInfo:list) (parentPos nodeInfo)
 
 mkField :: [String] -> Field
 mkField input = convert (zip [0..] $ concat input) M.empty
@@ -69,8 +80,8 @@ mkField input = convert (zip [0..] $ concat input) M.empty
         pos = Pos (id `mod` col, id `div` col)
         col = length $ head input
 
-searchPath :: Field -> Pos -> FieldState
-searchPath field startPos = searchNext [startPos] $ buildInitialState field startPos
+calculateScore :: Field -> Pos -> FieldState
+calculateScore field startPos = searchNext [startPos] $ buildInitialState field startPos
   where
     searchNext :: [Pos] -> FieldState -> FieldState
     searchNext [] field = field
@@ -91,7 +102,7 @@ buildOpenList (node:rest) posList = let list = OL.insertSet (pos node) posList
 
 getExistingNextNodes :: Field -> Pos -> [Node]
 getExistingNextNodes field pos = let nextPos = getNextPosList pos
-                                     existingPos = filter (\pos -> M.member pos field) nextPos
+                                     existingPos = filter (`M.member` field) nextPos
                                      existingNodes = map (MB.fromJust . flip M.lookup field) existingPos 
                                  in  filter isRoad existingNodes
   where
