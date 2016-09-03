@@ -3,6 +3,7 @@ module Main where
 import qualified Data.Map as M
 import qualified Data.List.Ordered as OL
 import qualified Data.Maybe as MB
+import System.Environment
 
 data Pos = Pos (Int, Int) | NonePos deriving (Show, Eq, Ord)
 data NodeType = Road | Wall | Start | Goal deriving (Show, Eq)
@@ -38,16 +39,18 @@ findGoalPos :: Field -> Pos
 findGoalPos field = let ((_, node):_) = M.toList $ M.filter (\node -> nodeType node == Goal) field
                     in pos node
 
-printField :: IO ()
-printField = mapM_ print fieldSample
+printField :: [String] -> IO ()
+printField ss = mapM_ print ss
 
 printMap :: (Show a, Show b) => M.Map a b -> IO ()
 printMap aMap = mapM_ print $ M.toList aMap
 
 main :: IO ()
 main = do
-    printField
-    let field = mkField fieldSample
+    (path:_) <- getArgs
+    contents <- lines <$> readFile path
+    printField contents
+    let field = mkField contents
     printMap field
     print "\n-----------------------------------------"
     printMap $ searchPath field (findStartPos field)
