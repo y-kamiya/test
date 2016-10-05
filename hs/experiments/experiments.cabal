@@ -80,3 +80,10 @@ executable sodium
   hs-source-dirs:      src/Sodium
   default-language:    Haskell2010
 
+executable th
+  main-is:             Main.hs
+  build-depends:       base >=4.7 && <5.0
+                     , template-haskell
+  hs-source-dirs:      src/Th
+  default-language:    Haskell2010
+
