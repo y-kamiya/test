@@ -3,6 +3,7 @@ import Control.Concurrent
 import FRP.Yampa.Vector3
 import FRP.Yampa.Utilities
 import Unsafe.Coerce
+import Data.IORef
 
 import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
 import qualified Graphics.UI.GLUT as G(Vector3(..))
@@ -16,6 +17,8 @@ type R = GLdouble
 fallingBall :: Pos -> SF () (Pos, Vel)
 fallingBall y0 = (constant (-9.81) >>> integral) >>> ((integral >>^ (+ y0)) &&& identity)
 
+bouncingBall :: Pos -> SF () (Pos, Vel)
+bouncingBall y0 = (fallingBall y0) >>^ \(pos, vel) -> pos <= 0 >>> edge
 
 initGL :: IO ()
 initGL = do
@@ -52,7 +55,7 @@ draw :: Pos -> IO ()
 draw pos = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
-    renderPlayer $ vector3 2 (unsafeCoerce pos) 2
+    renderPlayer $ vector3 2 (unsafeCoerce pos) (-30)
     flush
     where size2 :: R
           size2 = (fromInteger $ 6)/2
@@ -69,8 +72,26 @@ draw pos = do
           renderGoal     =
             (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20)
 
-main = reactimate (initGL)
-                       (\ _ -> threadDelay 100000 >> return (0.1, Nothing))
-                       (\ _ (pos, vel) -> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos >> return False)
-                       (fallingBall 10.0)
+mainSF = (fallingBall 10.0) >>^ (\ (pos, vel)-> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos)
 
+-- | Main, initializes Yampa and sets up reactimation loop
+main :: IO ()
+main = do
+    oldTime <- newIORef (0 :: Int)
+    rh <- reactInit (initGL) (\_ _ b -> b >> return False) 
+                    mainSF
+    displayCallback $= return ()
+    idleCallback $= Just (idle  oldTime rh)
+    oldTime' <- get elapsedTime
+    writeIORef oldTime oldTime' 
+    mainLoop
+
+-- | Reactimation iteration, supplying the input
+idle :: IORef Int -> ReactHandle () (IO ()) -> IO ()
+idle oldTime rh = do
+    newTime'  <- get elapsedTime
+    oldTime'  <- get oldTime
+    let dt = (fromIntegral $ newTime' - oldTime')/1000
+    react rh (dt, Nothing)
+    writeIORef oldTime newTime'
+    return ()
