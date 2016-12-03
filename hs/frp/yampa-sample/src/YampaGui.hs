@@ -1,3 +1,4 @@
+{-# LANGUAGE Arrows #-}
 import FRP.Yampa
 import Control.Concurrent
 import FRP.Yampa.Vector3
@@ -14,11 +15,16 @@ type Vel = Double
 type R = GLdouble
 
 
-fallingBall :: Pos -> SF () (Pos, Vel)
-fallingBall y0 = (constant (-9.81) >>> integral) >>> ((integral >>^ (+ y0)) &&& identity)
+fallingBall :: Pos -> Vel -> SF () (Pos, Vel)
+fallingBall y0 v0 = (constant (-9.81) >>> integral >>^ (+ v0)) >>> ((integral >>^ (+ y0)) &&& identity)
 
-bouncingBall :: Pos -> SF () (Pos, Vel)
-bouncingBall y0 = (fallingBall y0) >>^ \(pos, vel) -> pos <= 0 >>> edge
+bouncingBall :: Pos -> Vel -> SF () (Pos, Vel)
+bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> bouncingBall pos (-vel))
+  where bb y0 v0 = proc input -> do
+                    (pos, vel) <- fallingBall y0 v0 -< input
+                    event <- edge -< pos <= 0
+                    returnA -< ((pos, vel), event `tag` (pos, vel))
+    -- (fallingBall y0 v0) >>> (identity &&& (arr (\(pos, vel) -> pos <= 0) &&& \(pos, vel) -> edgeTag (pos, vel)))
 
 initGL :: IO ()
 initGL = do
@@ -72,7 +78,7 @@ draw pos = do
           renderGoal     =
             (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20)
 
-mainSF = (fallingBall 10.0) >>^ (\ (pos, vel)-> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos)
+mainSF = (bouncingBall 10.0 0.0) >>^ (\ (pos, vel)-> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos)
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
