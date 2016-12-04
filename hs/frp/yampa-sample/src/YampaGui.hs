@@ -19,7 +19,7 @@ fallingBall :: Pos -> Vel -> SF () (Pos, Vel)
 fallingBall y0 v0 = (constant (-9.81) >>> integral >>^ (+ v0)) >>> ((integral >>^ (+ y0)) &&& identity)
 
 bouncingBall :: Pos -> Vel -> SF () (Pos, Vel)
-bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> bouncingBall pos (-vel))
+bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then constant (0, 0) else bouncingBall pos (-vel * 0.6))
   where bb y0 v0 = proc input -> do
                     (pos, vel) <- fallingBall y0 v0 -< input
                     event <- edge -< pos <= 0
