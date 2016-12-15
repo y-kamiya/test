@@ -30,14 +30,15 @@ bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then cons
     -- (fallingBall y0 v0) >>> (identity &&& (arr (\(pos, vel) -> pos <= 0) &&& \(pos, vel) -> edgeTag (pos, vel)))
 -}
 
-movingPlayer :: SF ParsedInput (Pos, Vel)
+movingPlayer :: SF (Event GameInput) (Pos, Vel)
 movingPlayer = arr makeVelocity >>> (position &&& velocity)
-  where position = first $ integral >>^ (+ 1)
-        velocity = identity
-        makeVelocity :: ParsedInput -> Vel
-        makeVelocity input
-          | upEvs input /= NoEvent = (1,1)
-          | otherwise = (1,0)
+  where 
+    position = first $ integral >>^ (+ 1)
+    velocity = identity
+
+    makeVelocity :: Event GameInput -> Vel
+    makeVelocity (Event MoveUp) = (1,1)
+    makeVelocity _ = (1,0)
 
 initGL :: IO ()
 initGL = do
