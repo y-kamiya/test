@@ -10,11 +10,12 @@ import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
 import qualified Graphics.UI.GLUT as G(Vector3(..))
 
 
-type Pos = Double
-type Vel = Double
+type Pos = (Double, Double)
+type Vel = (Double, Double)
 type R = GLdouble
 
 
+{-
 fallingBall :: Pos -> Vel -> SF () (Pos, Vel)
 fallingBall y0 v0 = (constant (-9.81) >>> integral >>^ (+ v0)) >>> ((integral >>^ (+ y0)) &&& identity)
 
@@ -25,9 +26,12 @@ bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then cons
                     event <- edge -< pos <= 0
                     returnA -< ((pos, vel), event `tag` (pos, vel))
     -- (fallingBall y0 v0) >>> (identity &&& (arr (\(pos, vel) -> pos <= 0) &&& \(pos, vel) -> edgeTag (pos, vel)))
+-}
 
 movingPlayer :: SF () (Pos, Vel)
-movingPlayer = constant 1 >>> (integral >>^ (+ 1)) &&& identity
+movingPlayer = constant (1,0) >>> (position &&& velocity)
+  where position = first $ integral >>^ (+ 1)
+        velocity = identity
 
 initGL :: IO ()
 initGL = do
@@ -60,14 +64,17 @@ resizeScene s@(Size width height) = do
    h2 = half height
    half z = realToFrac z / 2
 
-draw :: Pos -> IO ()
-draw pos = do
+draw :: SF (Pos, Vel) (IO ())
+draw = arr render
+
+render :: (Pos, Vel) -> IO ()
+render (pos, _) = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
-    renderPlayer $ vector3 pos (unsafeCoerce 10) (-30)
+    renderPlayer $ vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
     flush
     where size2 :: R
-          size2 = (fromInteger $ 6)/2
+          size2 = 6 / 2
           green  = Color4 0.8 1.0 0.7 0.9 :: Color4 R
           greenG = Color4 0.8 1.0 0.7 1.0 :: Color4 R
           red    = Color4 1.0 0.7 0.8 1.0 :: Color4 R
@@ -76,13 +83,14 @@ draw pos = do
                                   (0.5 - size2 + vector3Y p)
                                   (0.5 - size2 + vector3Z p)
             renderObject Solid s
-          renderObstacle = (color green >>) . (renderShapeAt $ Cube 1)
-          renderPlayer   = (color red >>) . (renderShapeAt $ Sphere' 0.5 20 20)
+          renderObstacle = (color green >>) . renderShapeAt (Cube 1)
+          renderPlayer   = (color red >>) . renderShapeAt (Sphere' 0.5 20 20)
           renderGoal     =
-            (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20)
+            (color greenG >>) . renderShapeAt (Sphere' 0.5 20 20)
 
 -- mainSF = (bouncingBall 10.0 0.0) >>^ (\ (pos, vel)-> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos)
-mainSF = movingPlayer >>^ (\arg@(pos, vel) -> outputLog arg >> draw pos)
+-- mainSF = movingPlayer >>^ (\arg@(pos, vel) -> outputLog arg >> draw pos)
+mainSF = movingPlayer >>> draw
 
 outputLog :: (Pos, Vel) -> IO ()
 outputLog (pos, vel) = putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel)
@@ -91,7 +99,7 @@ outputLog (pos, vel) = putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel)
 main :: IO ()
 main = do
     oldTime <- newIORef (0 :: Int)
-    rh <- reactInit (initGL) (\_ _ b -> b >> return False) 
+    rh <- reactInit initGL (\_ _ b -> b >> return False) 
                     mainSF
     displayCallback $= return ()
     idleCallback $= Just (idle  oldTime rh)
@@ -104,7 +112,7 @@ idle :: IORef Int -> ReactHandle () (IO ()) -> IO ()
 idle oldTime rh = do
     newTime'  <- get elapsedTime
     oldTime'  <- get oldTime
-    let dt = (fromIntegral $ newTime' - oldTime')/1000
+    let dt = fromIntegral (newTime' - oldTime') / 1000
     react rh (dt, Nothing)
     writeIORef oldTime newTime'
     return ()
