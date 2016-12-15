@@ -9,6 +9,8 @@ import Data.IORef
 import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
 import qualified Graphics.UI.GLUT as G(Vector3(..))
 
+import Input
+
 
 type Pos = (Double, Double)
 type Vel = (Double, Double)
@@ -28,10 +30,14 @@ bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then cons
     -- (fallingBall y0 v0) >>> (identity &&& (arr (\(pos, vel) -> pos <= 0) &&& \(pos, vel) -> edgeTag (pos, vel)))
 -}
 
-movingPlayer :: SF () (Pos, Vel)
-movingPlayer = constant (1,0) >>> (position &&& velocity)
+movingPlayer :: SF ParsedInput (Pos, Vel)
+movingPlayer = arr makeVelocity >>> (position &&& velocity)
   where position = first $ integral >>^ (+ 1)
         velocity = identity
+        makeVelocity :: ParsedInput -> Vel
+        makeVelocity input
+          | upEvs input /= NoEvent = (1,1)
+          | otherwise = (1,0)
 
 initGL :: IO ()
 initGL = do
@@ -90,7 +96,8 @@ render (pos, _) = do
 
 -- mainSF = (bouncingBall 10.0 0.0) >>^ (\ (pos, vel)-> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos)
 -- mainSF = movingPlayer >>^ (\arg@(pos, vel) -> outputLog arg >> draw pos)
-mainSF = movingPlayer >>> draw
+mainSF :: SF (Event Input) (IO ())
+mainSF = parseInput >>> movingPlayer >>> draw
 
 outputLog :: (Pos, Vel) -> IO ()
 outputLog (pos, vel) = putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel)
@@ -99,20 +106,25 @@ outputLog (pos, vel) = putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel)
 main :: IO ()
 main = do
     oldTime <- newIORef (0 :: Int)
-    rh <- reactInit initGL (\_ _ b -> b >> return False) 
+    rh <- reactInit (initGL >> return NoEvent)
+                    (\_ _ b -> b >> return False) 
                     mainSF
     displayCallback $= return ()
-    idleCallback $= Just (idle  oldTime rh)
+    newInput <- newIORef NoEvent
+    keyboardMouseCallback $= Just 
+        (\k ks m _ -> writeIORef newInput (Event $ Keyboard k ks m))
+    idleCallback $= Just (idle newInput oldTime rh)
     oldTime' <- get elapsedTime
     writeIORef oldTime oldTime' 
     mainLoop
 
 -- | Reactimation iteration, supplying the input
-idle :: IORef Int -> ReactHandle () (IO ()) -> IO ()
-idle oldTime rh = do
+idle :: IORef (Event Input) -> IORef Int -> ReactHandle (Event Input) (IO ()) -> IO ()
+idle newInput oldTime rh = do
+    newInput' <- get newInput
     newTime'  <- get elapsedTime
     oldTime'  <- get oldTime
     let dt = fromIntegral (newTime' - oldTime') / 1000
-    react rh (dt, Nothing)
+    react rh (dt, Just newInput')
     writeIORef oldTime newTime'
     return ()
