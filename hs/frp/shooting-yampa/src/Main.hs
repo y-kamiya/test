@@ -26,8 +26,8 @@ bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then cons
                     returnA -< ((pos, vel), event `tag` (pos, vel))
     -- (fallingBall y0 v0) >>> (identity &&& (arr (\(pos, vel) -> pos <= 0) &&& \(pos, vel) -> edgeTag (pos, vel)))
 
-stayingPlayer :: SF () (Pos, Vel)
-stayingPlayer = constant (0, 0)
+movingPlayer :: SF () (Pos, Vel)
+movingPlayer = constant 1 >>> (integral >>^ (+ 1)) &&& identity
 
 initGL :: IO ()
 initGL = do
@@ -64,7 +64,7 @@ draw :: Pos -> IO ()
 draw pos = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
-    renderPlayer $ vector3 2 (unsafeCoerce pos) (-30)
+    renderPlayer $ vector3 pos (unsafeCoerce 10) (-30)
     flush
     where size2 :: R
           size2 = (fromInteger $ 6)/2
@@ -82,7 +82,7 @@ draw pos = do
             (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20)
 
 -- mainSF = (bouncingBall 10.0 0.0) >>^ (\ (pos, vel)-> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos)
-mainSF = stayingPlayer >>^ (\arg@(pos, vel) -> outputLog arg >> draw 0)
+mainSF = movingPlayer >>^ (\arg@(pos, vel) -> outputLog arg >> draw pos)
 
 outputLog :: (Pos, Vel) -> IO ()
 outputLog (pos, vel) = putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel)
