@@ -31,14 +31,17 @@ bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then cons
 -}
 
 movingPlayer :: SF (Event GameInput) (Pos, Vel)
-movingPlayer = arr makeVelocity >>> (position &&& velocity)
+movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity)
   where 
-    position = first $ integral >>^ (+ 1)
+    position = integral
     velocity = identity
 
     makeVelocity :: Event GameInput -> Vel
-    makeVelocity (Event MoveUp) = (1,1)
-    makeVelocity _ = (1,0)
+    makeVelocity (Event MoveUp)    = (0,1)
+    makeVelocity (Event MoveRight) = (1,0)
+    makeVelocity (Event MoveDown)  = (0,-1)
+    makeVelocity (Event MoveLeft)  = (-1,0)
+    makeVelocity _ = (0,0)
 
 initGL :: IO ()
 initGL = do
@@ -95,13 +98,11 @@ render (pos, _) = do
           renderGoal     =
             (color greenG >>) . renderShapeAt (Sphere' 0.5 20 20)
 
--- mainSF = (bouncingBall 10.0 0.0) >>^ (\ (pos, vel)-> putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel) >> draw pos)
--- mainSF = movingPlayer >>^ (\arg@(pos, vel) -> outputLog arg >> draw pos)
-mainSF :: SF (Event Input) (IO ())
-mainSF = parseInput >>> movingPlayer >>> draw
+updateGame :: SF (Event GameInput) (Pos, Vel)
+updateGame = movingPlayer
 
-outputLog :: (Pos, Vel) -> IO ()
-outputLog (pos, vel) = putStrLn ("pos: " ++ show pos ++ ", vel: " ++ show vel)
+mainSF :: SF (Event Input) (IO ())
+mainSF = parseInput >>> updateGame >>> draw
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()

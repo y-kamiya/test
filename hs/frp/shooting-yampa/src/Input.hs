@@ -7,7 +7,12 @@ module Input ( parseInput
 import FRP.Yampa
 import Graphics.UI.GLUT
 
-data GameInput = MoveUp | MoveRight | MoveDown | MoveLeft deriving (Eq, Show)
+data GameInput = MoveUp 
+               | MoveRight 
+               | MoveDown 
+               | MoveLeft 
+               | Shot 
+               deriving (Eq, Show)
 
 data Input = Keyboard { key       :: Key,
                         keyState  :: KeyState,
@@ -44,4 +49,5 @@ translateInput (Event (Keyboard {key = SpecialKey KeyUp   })) = Event MoveUp
 translateInput (Event (Keyboard {key = SpecialKey KeyRight})) = Event MoveRight
 translateInput (Event (Keyboard {key = SpecialKey KeyDown })) = Event MoveDown
 translateInput (Event (Keyboard {key = SpecialKey KeyLeft })) = Event MoveLeft
+translateInput (Event (Keyboard {key = Char 's' })) = Event Shot
 translateInput _  = NoEvent
