@@ -16,6 +16,18 @@ type Pos = (Double, Double)
 type Vel = (Double, Double)
 type R = GLdouble
 
+data ObjectKind = KindPlayer
+                | KindShot
+                deriving (Eq, Show)
+
+data GameObject = GameObject { 
+                    objKind :: ObjectKind
+                  , objPos :: Pos
+                  , objVel :: Vel
+                  } deriving (Eq, Show)
+
+type GameOutput = [GameObject]
+
 
 {-
 fallingBall :: Pos -> Vel -> SF () (Pos, Vel)
@@ -30,8 +42,8 @@ bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then cons
     -- (fallingBall y0 v0) >>> (identity &&& (arr (\(pos, vel) -> pos <= 0) &&& \(pos, vel) -> edgeTag (pos, vel)))
 -}
 
-movingPlayer :: SF (Event GameInput) (Pos, Vel)
-movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity)
+movingPlayer :: SF (Event GameInput) GameOutput
+movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
   where 
     position = integral
     velocity = identity
@@ -74,14 +86,11 @@ resizeScene s@(Size width height) = do
    h2 = half height
    half z = realToFrac z / 2
 
-draw :: SF (Pos, Vel) (IO ())
-draw = arr render
-
-render :: (Pos, Vel) -> IO ()
-render (pos, _) = do
+render :: GameOutput -> IO ()
+render output = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
-    renderPlayer $ vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
+    mapM_ renderPlayer' output
     flush
     where size2 :: R
           size2 = 6 / 2
@@ -98,11 +107,15 @@ render (pos, _) = do
           renderGoal     =
             (color greenG >>) . renderShapeAt (Sphere' 0.5 20 20)
 
-updateGame :: SF (Event GameInput) (Pos, Vel)
+          renderPlayer' :: GameObject -> IO ()
+          renderPlayer' GameObject {objPos = pos} = renderPlayer $ vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
+
+
+updateGame :: SF (Event GameInput) GameOutput
 updateGame = movingPlayer
 
 mainSF :: SF (Event Input) (IO ())
-mainSF = parseInput >>> updateGame >>> draw
+mainSF = parseInput >>> updateGame >>> arr render
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
