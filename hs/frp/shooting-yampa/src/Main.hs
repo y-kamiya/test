@@ -28,22 +28,22 @@ data GameObject = GameObject {
 
 type GameOutput = [GameObject]
 
+type ObjectSF = SF (Event GameInput) GameObject
 
-{-
-fallingBall :: Pos -> Vel -> SF () (Pos, Vel)
-fallingBall y0 v0 = (constant (-9.81) >>> integral >>^ (+ v0)) >>> ((integral >>^ (+ y0)) &&& identity)
+fallingBall :: Pos -> Vel -> ObjectSF
+fallingBall (_,y0) (_,v0) = (constant (-9.81) >>> integral >>^ (+ v0)) 
+                            >>> ((integral >>^ (+ y0)) &&& identity) 
+                            >>^ (\(y, v) -> GameObject KindPlayer (10,y) (0,v))
 
-bouncingBall :: Pos -> Vel -> SF () (Pos, Vel)
-bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then constant (0, 0) else bouncingBall pos (-vel * 0.6))
-  where bb y0 v0 = proc input -> do
-                    (pos, vel) <- fallingBall y0 v0 -< input
-                    event <- edge -< pos <= 0
-                    returnA -< ((pos, vel), event `tag` (pos, vel))
-    -- (fallingBall y0 v0) >>> (identity &&& (arr (\(pos, vel) -> pos <= 0) &&& \(pos, vel) -> edgeTag (pos, vel)))
--}
+-- bouncingBall :: Pos -> Vel -> SF () (Pos, Vel)
+-- bouncingBall y0 v0 = switch (bb y0 v0) (\(pos, vel) -> if abs vel <= 1 then constant (0, 0) else bouncingBall pos (-vel * 0.6))
+--   where bb y0 v0 = proc input -> do
+--                     (pos, vel) <- fallingBall y0 v0 -< input
+--                     event <- edge -< pos <= 
+--                     returnA -< ((pos, vel), event `tag` (pos, vel))
 
-movingPlayer :: SF (Event GameInput) GameOutput
-movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
+movingPlayer :: ObjectSF
+movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\(pos, vel) -> GameObject KindPlayer pos vel)
   where 
     position = integral
     velocity = identity
@@ -54,6 +54,7 @@ movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\
     makeVelocity (Event MoveDown)  = (0,-1)
     makeVelocity (Event MoveLeft)  = (-1,0)
     makeVelocity _ = (0,0)
+
 
 initGL :: IO ()
 initGL = do
@@ -111,11 +112,21 @@ render output = do
           renderPlayer' GameObject {objPos = pos} = renderPlayer $ vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
 
 
-updateGame :: SF (Event GameInput) GameOutput
-updateGame = movingPlayer
+updateGame :: [ObjectSF] -> SF (Event GameInput) GameOutput
+updateGame objsfs = dpSwitchB objsfs 
+                      (arr (\(input,output) -> noEvent))
+                      (\sfs _ -> updateGame sfs)
 
 mainSF :: SF (Event Input) (IO ())
-mainSF = parseInput >>> updateGame >>> arr render
+mainSF = parseInput >>> shootingScene
+
+shootingScene :: SF (Event GameInput) (IO ())
+shootingScene = updateGame initialObjectSFs >>> arr render
+
+initialObjectSFs :: [ObjectSF]
+initialObjectSFs = [movingPlayer
+                   ,fallingBall (0,0) (0,0)
+                   ]
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
