@@ -55,6 +55,8 @@ movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\
     makeVelocity (Event MoveLeft)  = (-1,0)
     makeVelocity _ = (0,0)
 
+shot :: Pos -> Vel -> ObjectSF
+shot p0 v0 = constant v0 >>> ((integral >>^ (^+^ p0)) &&& identity) >>^ uncurry (GameObject KindShot)
 
 initGL :: IO ()
 initGL = do
@@ -91,6 +93,7 @@ render :: GameOutput -> IO ()
 render output = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
+    print output
     mapM_ renderPlayer' output
     flush
     where size2 :: R
@@ -114,8 +117,15 @@ render output = do
 
 updateGame :: [ObjectSF] -> SF (Event GameInput) GameOutput
 updateGame objsfs = dpSwitchB objsfs 
-                      (arr (\(input,output) -> noEvent))
-                      (\sfs _ -> updateGame sfs)
+                      (arr emitter)
+                      (\sfs input -> updateGame $ updateObjectSFs sfs input)
+
+updateObjectSFs :: [ObjectSF] -> GameInput -> [ObjectSF]
+updateObjectSFs sfs Shot = shot (0,0) (0,0) : sfs
+updateObjectSFs sfs _ = sfs
+
+emitter :: (Event GameInput, GameOutput) -> Event GameInput
+emitter (input, _) = input
 
 mainSF :: SF (Event Input) (IO ())
 mainSF = parseInput >>> shootingScene
