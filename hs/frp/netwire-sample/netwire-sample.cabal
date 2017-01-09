@@ -26,6 +26,8 @@ executable netwire-sample-exe
   build-depends:       base
                      , netwire-sample
                      , netwire
+                     , GLFW-b
+                     , OpenGL
   default-language:    Haskell2010
 
 test-suite netwire-sample-test
