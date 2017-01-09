@@ -1,15 +1,16 @@
 {-# LANGUAGE Arrows #-}
 module Main where
 
--- import Control.Wire
--- import FRP.Netwire
-
-import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
-import qualified Graphics.UI.GLUT as G(Vector3(..))
+import Prelude hiding ((.))
+import Control.Wire
+import FRP.Netwire
+import Graphics.UI.GLUT
 
 import Data.IORef
 import Control.Monad
 import Control.Concurrent
+
+type R = GLdouble
 
 initGL :: IO ()
 initGL = do
@@ -42,36 +43,46 @@ resizeScene s@(Size width height) = do
    h2 = half height
    half z = realToFrac z / 2
 
-draw :: Pos -> IO ()
-draw pos = do
+draw :: IORef Int -> IO ()
+draw oldTime = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
-    renderPlayer $ vector3 2 (unsafeCoerce pos) (-30)
+    time <- get oldTime
+    renderString Fixed8By13 $ show time
+    renderPlayer $ Vector3 10 10 (-30)
     flush
     where size2 :: R
           size2 = (fromInteger $ 6)/2
           green  = Color4 0.8 1.0 0.7 0.9 :: Color4 R
           greenG = Color4 0.8 1.0 0.7 1.0 :: Color4 R
           red    = Color4 1.0 0.7 0.8 1.0 :: Color4 R
-          renderShapeAt s p = preservingMatrix $ do
-            translate $ G.Vector3 (0.5 - size2 + vector3X p)
-                                  (0.5 - size2 + vector3Y p)
-                                  (0.5 - size2 + vector3Z p)
+          renderShapeAt s (Vector3 x y z) = preservingMatrix $ do
+            translate $ Vector3 (0.5 - size2 + x)
+                                (0.5 - size2 + y)
+                                (0.5 - size2 + z)
             renderObject Solid s
           renderObstacle = (color green >>) . (renderShapeAt $ Cube 1)
           renderPlayer   = (color red >>) . (renderShapeAt $ Sphere' 0.5 20 20)
-          renderGoal     =
-            (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20)
+          renderGoal     = (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20)
 
 main :: IO ()
 main = do
+    initGL
     oldTime <- newIORef (0 :: Int)
+    time <- get oldTime
     displayCallback $= return ()
-    idleCallback $= Just idle
+    idleCallback $= Just (idle clockSession)
     oldTime' <- get elapsedTime
     writeIORef oldTime oldTime' 
     mainLoop
 
-idle :: IO ()
-idle = do
-  print "aaaaaaaaaa"
+idle :: Session IO s -> IO ()
+idle session = do
+  (s, session') <- stepSession session
+  -- print s
+  (e', wire') <- stepWire wire s $ Right ()
+  print e'
+  idle session'
+
+wire :: Wire s () IO () Double
+wire = integral 0 . pure 9.8

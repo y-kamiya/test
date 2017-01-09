@@ -21,7 +21,7 @@ library
 
 executable netwire-sample-glut-exe
   hs-source-dirs:      app
-  main-is:             GULTMain.hs
+  main-is:             GLUTMain.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , netwire-sample
