@@ -71,18 +71,19 @@ main = do
     oldTime <- newIORef (0 :: Int)
     time <- get oldTime
     displayCallback $= return ()
-    idleCallback $= Just (idle clockSession)
+    idleCallback $= Just (idle clockSession_)
     oldTime' <- get elapsedTime
     writeIORef oldTime oldTime' 
     mainLoop
 
 idle :: Session IO s -> IO ()
 idle session = do
-  (s, session') <- stepSession session
-  -- print s
-  (e', wire') <- stepWire wire s $ Right ()
-  print e'
-  idle session'
+  testWire clockSession_ wire
+  -- (s, session') <- stepSession session
+  -- -- print s
+  -- (e', wire') <- stepWire wire s $ Right ()
+  -- print e'
+  -- idle session'
 
-wire :: Wire s () IO () Double
-wire = integral 0 . pure 9.8
+wire :: (HasTime t s) => Wire s () Identity a Double
+wire = time >>> integral 0 . pure 9.8
