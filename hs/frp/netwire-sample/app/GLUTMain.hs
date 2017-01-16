@@ -10,6 +10,8 @@ import Data.IORef
 import Control.Monad
 import Control.Concurrent
 
+type Pos = Double
+type Vel = Double
 type R = GLdouble
 
 initGL :: IO ()
@@ -78,12 +80,13 @@ main = do
 
 idle :: Session IO s -> IO ()
 idle session = do
-  testWire clockSession_ wire
+  testWire clockSession_ $ fallingBall 0 0
   -- (s, session') <- stepSession session
   -- -- print s
   -- (e', wire') <- stepWire wire s $ Right ()
   -- print e'
   -- idle session'
 
-wire :: (HasTime t s) => Wire s () Identity a Double
-wire = time >>> integral 0 . pure 9.8
+fallingBall :: (HasTime t s) => Pos -> Vel -> Wire s () Identity a (Pos, Vel)
+fallingBall y0 v0 = time >>> integral v0 . pure 9.81 >>> (integral y0 &&& WId)
+
