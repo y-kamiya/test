@@ -45,13 +45,11 @@ resizeScene s@(Size width height) = do
    h2 = half height
    half z = realToFrac z / 2
 
-draw :: IORef Int -> IO ()
-draw oldTime = do
+draw :: (Pos, Vel) -> IO ()
+draw (pos, vel) = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
-    time <- get oldTime
-    renderString Fixed8By13 $ show time
-    renderPlayer $ Vector3 10 10 (-30)
+    renderPlayer $ Vector3 10 pos (-30)
     flush
     where size2 :: R
           size2 = (fromInteger $ 6)/2
@@ -80,7 +78,9 @@ main = do
 
 idle :: Session IO s -> IO ()
 idle session = do
-  testWire clockSession_ $ fallingBall 0 0
+  (dt, _) <- stepSession clockSession_ 
+  let (Right o, _) = runIdentity $ stepWire (fallingBall 0 0) dt (Right ())
+  draw o
   -- (s, session') <- stepSession session
   -- -- print s
   -- (e', wire') <- stepWire wire s $ Right ()
