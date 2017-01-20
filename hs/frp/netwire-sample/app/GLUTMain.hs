@@ -71,7 +71,7 @@ main = do
     oldTime <- newIORef (0 :: Int)
     time <- get oldTime
     displayCallback $= return ()
-    idleCallback $= Just (idle clockSession_ $ fallingBall 0 0)
+    idleCallback $= Just (idle clockSession_ $ bouncingBall 10 0)
     oldTime' <- get elapsedTime
     writeIORef oldTime oldTime' 
     mainLoop
@@ -79,13 +79,20 @@ main = do
 -- idle :: Session IO (Timed NominalDiffTime ()) -> IO ()
 idle session wire = do
   (dt, session') <- stepSession session 
-  -- print dt
+  print dt
   let (Right o, wire') = runIdentity $ stepWire wire dt (Right ())
-  -- print o
+  print o
   draw o
   idleCallback $= Just (idle session' wire')
   -- testWire clockSession_ (fallingBall 0 0)
 
 fallingBall :: (HasTime t s) => Pos -> Vel -> Wire s () Identity a (Pos, Vel)
 fallingBall y0 v0 = time >>> integral v0 . pure (-9.81) >>> (integral y0 &&& WId)
+
+bouncingBall :: (HasTime t s) => Pos -> Vel -> Wire s () Identity a (Pos, Vel)
+bouncingBall y0 v0 = switch (bb y0 v0)
+  where bb y0 v0 = proc input -> do
+                    (pos, vel) <- fallingBall y0 v0 -< input
+                    event <- edge (<= 0) -< pos
+                    returnA -< ((pos, vel), const (bouncingBall pos $ -vel * 0.6) <$> event)
 
