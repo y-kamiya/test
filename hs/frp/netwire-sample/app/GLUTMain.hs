@@ -90,9 +90,9 @@ fallingBall :: (HasTime t s) => Pos -> Vel -> Wire s () Identity a (Pos, Vel)
 fallingBall y0 v0 = time >>> integral v0 . pure (-9.81) >>> (integral y0 &&& WId)
 
 bouncingBall :: (HasTime t s) => Pos -> Vel -> Wire s () Identity a (Pos, Vel)
-bouncingBall y0 v0 = switch (bb y0 v0)
+bouncingBall y0 v0 = dSwitch (bb y0 v0)
   where bb y0 v0 = proc input -> do
                     (pos, vel) <- fallingBall y0 v0 -< input
                     event <- edge (<= 0) -< pos
-                    returnA -< ((pos, vel), const (bouncingBall pos $ -vel * 0.6) <$> event)
+                    returnA -< ((pos, vel), const (bouncingBall (-pos) $ -vel * 0.6) <$> event)
 
