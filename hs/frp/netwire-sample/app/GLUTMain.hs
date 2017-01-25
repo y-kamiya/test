@@ -68,12 +68,8 @@ draw (pos, vel) = do
 main :: IO ()
 main = do
     initGL
-    oldTime <- newIORef (0 :: Int)
-    time <- get oldTime
     displayCallback $= return ()
     idleCallback $= Just (idle clockSession_ $ bouncingBall 10 0)
-    oldTime' <- get elapsedTime
-    writeIORef oldTime oldTime' 
     mainLoop
 
 -- idle :: Session IO (Timed NominalDiffTime ()) -> IO ()
