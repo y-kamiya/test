@@ -2,12 +2,12 @@
 import Prelude hiding ((.))
 import Control.Wire
 import FRP.Netwire
+import Control.Wire.Unsafe.Event
 import Control.Concurrent
 import Unsafe.Coerce
 import Data.IORef
 
-import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
-import qualified Graphics.UI.GLUT as G(Vector3(..))
+import Graphics.UI.GLUT hiding (Level,normalize)
 
 import Input
 
@@ -28,17 +28,12 @@ data GameObject = GameObject {
 
 type GameOutput = [GameObject]
 
-type ObjectSF = (HasTime t s) => Wire s () IO (Event GameInput) GameObject
-
-fallingBall :: Pos -> Vel -> ObjectSF
-fallingBall (_,y0) (_,v0) = (constant (-9.81) >>> integral >>^ (+ v0)) 
-                            >>> ((integral >>^ (+ y0)) &&& identity) 
-                            >>^ (\(y, v) -> GameObject KindPlayer (10,y) (0,v))
+type ObjectSF = Wire () () Identity (Event GameInput) GameObject
 
 movingPlayer :: ObjectSF
 movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\(pos, vel) -> GameObject KindPlayer pos vel)
   where 
-    position = integral
+    position = integral 0
     velocity = identity
 
     makeVelocity :: Event GameInput -> Vel
@@ -52,7 +47,7 @@ shot :: Pos -> Vel -> ObjectSF
 shot p0 v0 = constant v0 >>> ((integral >>^ (^+^ p0)) &&& identity) >>^ uncurry (GameObject KindShot)
 
 
-updateGame :: (HasTime t s) => [ObjectSF] -> Wire s () IO (Event GameInput) GameOutput
+updateGame :: (HasTime t s) => [ObjectSF] -> Wire s () Identity (Event GameInput) GameOutput
 updateGame objsfs = dpSwitchB objsfs 
                       (arr emitter)
                       (\sfs input -> updateGame $ updateObjectSFs sfs input)
@@ -64,11 +59,11 @@ updateObjectSFs sfs _ = sfs
 emitter :: (Event GameInput, GameOutput) -> Event GameInput
 emitter (input, _) = input
 
-mainSF :: (HasTime t s) => Wire s () IO (Event Input) ()
+mainSF :: (HasTime t s) => Wire s () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
 
-shootingScene :: (HasTime t s) => Wire s () IO (Event GameInput) ()
-shootingScene = updateGame initialObjectSFs >>> arr render
+shootingScene :: (HasTime t s) => Wire s () Identity (Event GameInput) GameOutput
+shootingScene = updateGame initialObjectSFs
 
 initialObjectSFs :: [ObjectSF]
 initialObjectSFs = [movingPlayer
@@ -83,7 +78,7 @@ main = do
     newInput <- newIORef NoEvent
     keyboardMouseCallback $= Just 
         (\k ks m _ -> writeIORef newInput (Event $ Keyboard k ks m))
-    idleCallback $= Just (idle newInput clockSession_ mainSF
+    idleCallback $= Just (idle newInput clockSession_ mainSF)
     mainLoop
 
 -- idle :: IORef (Event Input) -> Session IO (Timed NominalDiffTime ()) -> IO ()
@@ -91,11 +86,9 @@ idle newInput session wire = do
   (dt, session') <- stepSession session 
   print dt
   newInput' <- get newInput
-  let (Right o, wire') = runIdentity $ stepWire wire dt (Right newInput')
-  print o
-  draw o
-  idleCallback $= Just (idle session' wire')
-  -- testWire clockSession_ (fallingBall 0 0)
+  let (Right output, wire') = runIdentity $ stepWire wire dt (Right newInput')
+  render output
+  idleCallback $= Just (idle newInput session' wire')
 
 
 

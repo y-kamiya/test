@@ -6,6 +6,7 @@ module Input ( parseInput
 
 import Prelude hiding ((.))
 import Control.Wire
+import Control.Wire.Unsafe.Event
 import Graphics.UI.GLUT
 
 data GameInput = MoveUp 
@@ -27,7 +28,7 @@ data Input = Keyboard { key       :: Key,
 --                                  deriving Show
 --
 filterKeyDowns :: (HasTime t s) => Wire s () IO (Event Input) (Event Input)
-filterKeyDowns = arr $ filterE ((==Down) . keyState)
+filterKeyDowns = filterE ((==Down) . keyState)
 --                        
 -- parseInput :: (HasTime t s) => Wire s () IO (Event Input) ParsedInput
 -- parseInput = proc i -> do
