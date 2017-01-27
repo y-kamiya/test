@@ -27,10 +27,10 @@ data Input = Keyboard { key       :: Key,
 --                                  leftEvs  :: Event Input }
 --                                  deriving Show
 --
-filterKeyDowns :: (HasTime t s) => Wire s () IO (Event Input) (Event Input)
+filterKeyDowns :: (HasTime t s) => Wire s () Identity (Event Input) (Event Input)
 filterKeyDowns = filterE ((==Down) . keyState)
 --                        
--- parseInput :: (HasTime t s) => Wire s () IO (Event Input) ParsedInput
+-- parseInput :: (HasTime t s) => Wire s () Identity (Event Input) ParsedInput
 -- parseInput = proc i -> do
 --     down <- filterKeyDowns                  -< i
 --     uEvs <- filterKey (SpecialKey KeyUp)    -< down
@@ -40,7 +40,7 @@ filterKeyDowns = filterE ((==Down) . keyState)
 --     returnA -< ParsedInput uEvs dEvs rEvs lEvs
 --     where filterKey k = arr $ filterE ((==k) . key)
 --
-parseInput :: (HasTime t s) => Wire s () IO (Event Input) (Event GameInput)
+parseInput :: (HasTime t s) => Wire s () Identity (Event Input) (Event GameInput)
 parseInput = proc i -> do
     down <- filterKeyDowns          -< i
     gameEvent <- arr translateInput -< down

@@ -30,11 +30,16 @@ type GameOutput = [GameObject]
 
 type ObjectSF = Wire () () Identity (Event GameInput) GameObject
 
+fallingBall :: Pos -> Vel -> ObjectSF
+fallingBall (_,y0) (_,v0) = (mkConst (Right (-9.81)) >>> integral v0) 
+                            >>> ((integral y0) &&& mkId) 
+                            >>^ (\(y, v) -> GameObject KindPlayer (10,y) (0,v))
+
 movingPlayer :: ObjectSF
 movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\(pos, vel) -> GameObject KindPlayer pos vel)
   where 
     position = integral 0
-    velocity = identity
+    velocity = mkId
 
     makeVelocity :: Event GameInput -> Vel
     makeVelocity (Event MoveUp)    = (0,1)
@@ -44,7 +49,7 @@ movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\
     makeVelocity _ = (0,0)
 
 shot :: Pos -> Vel -> ObjectSF
-shot p0 v0 = constant v0 >>> ((integral >>^ (^+^ p0)) &&& identity) >>^ uncurry (GameObject KindShot)
+shot p0 v0 = mkConst (Right v0) >>> ((integral p0) &&& mkId) >>^ uncurry (GameObject KindShot)
 
 
 updateGame :: (HasTime t s) => [ObjectSF] -> Wire s () Identity (Event GameInput) GameOutput
