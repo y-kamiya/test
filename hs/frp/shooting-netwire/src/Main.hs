@@ -28,7 +28,10 @@ data GameObject = GameObject {
 
 type GameOutput = [GameObject]
 
-type ObjectSF = Wire () () Identity (Event GameInput) GameObject
+type ObjectSF = Wire (Timed NominalDiffTime ()) () Identity (Event GameInput) GameObject
+
+integrals :: (HasTime t s, Fractional a) => (a, a) -> Wire s () Identity (a, a) (a, a)
+integrals (x,y) = first (integral x) >>> second (integral y)
 
 fallingBall :: Pos -> Vel -> ObjectSF
 fallingBall (_,y0) (_,v0) = (mkConst (Right (-9.81)) >>> integral v0) 
@@ -36,21 +39,17 @@ fallingBall (_,y0) (_,v0) = (mkConst (Right (-9.81)) >>> integral v0)
                             >>^ (\(y, v) -> GameObject KindPlayer (10,y) (0,v))
 
 movingPlayer :: ObjectSF
-movingPlayer = (arr makeVelocity >>^ (10 *^)) >>> (position &&& velocity) >>^ (\(pos, vel) -> GameObject KindPlayer pos vel)
+movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel) -> GameObject KindPlayer pos vel)
   where 
-    position = integral 0
-    velocity = mkId
-
     makeVelocity :: Event GameInput -> Vel
-    makeVelocity (Event MoveUp)    = (0,1)
-    makeVelocity (Event MoveRight) = (1,0)
-    makeVelocity (Event MoveDown)  = (0,-1)
-    makeVelocity (Event MoveLeft)  = (-1,0)
+    makeVelocity (Event MoveUp)    = (0,10)
+    makeVelocity (Event MoveRight) = (10,0)
+    makeVelocity (Event MoveDown)  = (0,-10)
+    makeVelocity (Event MoveLeft)  = (-10,0)
     makeVelocity _ = (0,0)
 
 shot :: Pos -> Vel -> ObjectSF
-shot p0 v0 = mkConst (Right v0) >>> ((integral p0) &&& mkId) >>^ uncurry (GameObject KindShot)
-
+shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot)
 
 updateGame :: (HasTime t s) => [ObjectSF] -> Wire s () Identity (Event GameInput) GameOutput
 updateGame objsfs = dpSwitchB objsfs 
