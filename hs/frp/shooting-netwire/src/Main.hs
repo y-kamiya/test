@@ -28,7 +28,8 @@ data GameObject = GameObject {
 
 type GameOutput = [GameObject]
 
-type ObjectSF = Wire (Timed NominalDiffTime ()) () Identity (Event GameInput) GameObject
+type TimeState = Timed NominalDiffTime ()
+type ObjectSF = Wire TimeState () Identity (Event GameInput) GameObject
 
 integrals :: (HasTime t s, Fractional a) => (a, a) -> Wire s () Identity (a, a) (a, a)
 integrals (x,y) = first (integral x) >>> second (integral y)
@@ -51,10 +52,15 @@ movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel
 shot :: Pos -> Vel -> ObjectSF
 shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot)
 
-updateGame :: (HasTime t s) => [ObjectSF] -> Wire s () Identity (Event GameInput) GameOutput
-updateGame objsfs = dpSwitchB objsfs 
-                      (arr emitter)
-                      (\sfs input -> updateGame $ updateObjectSFs sfs input)
+updateGame ::  [ObjectSF] -> Wire TimeState () Identity (Event GameInput) GameOutput
+updateGame objsfs = proc input -> do
+  -- TODO should use objsfs
+  o1 <- movingPlayer -< input
+  o2 <- fallingBall (0,0) (0,0) -< input
+  returnA -< [o1, o2]
+-- dpSwitchB objsfs 
+--                       (arr emitter)
+--                       (\sfs input -> updateGame $ updateObjectSFs sfs input)
 
 updateObjectSFs :: [ObjectSF] -> GameInput -> [ObjectSF]
 updateObjectSFs sfs Shot = shot (0,0) (0,0) : sfs
@@ -63,10 +69,10 @@ updateObjectSFs sfs _ = sfs
 emitter :: (Event GameInput, GameOutput) -> Event GameInput
 emitter (input, _) = input
 
-mainSF :: (HasTime t s) => Wire s () Identity (Event Input) GameOutput
+mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
 
-shootingScene :: (HasTime t s) => Wire s () Identity (Event GameInput) GameOutput
+shootingScene :: Wire TimeState () Identity (Event GameInput) GameOutput
 shootingScene = updateGame initialObjectSFs
 
 initialObjectSFs :: [ObjectSF]
