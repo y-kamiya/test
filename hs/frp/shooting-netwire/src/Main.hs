@@ -29,7 +29,7 @@ data GameObject = GameObject {
 type GameOutput = [GameObject]
 
 type TimeState = Timed NominalDiffTime ()
-type ObjectSF = Wire TimeState () Identity (Event GameInput) GameObject
+type ObjectSF = Wire TimeState () Identity (Event GameInput) GameOutput
 
 integrals :: (HasTime t s, Fractional a) => (a, a) -> Wire s () Identity (a, a) (a, a)
 integrals (x,y) = first (integral x) >>> second (integral y)
@@ -37,10 +37,10 @@ integrals (x,y) = first (integral x) >>> second (integral y)
 fallingBall :: Pos -> Vel -> ObjectSF
 fallingBall (_,y0) (_,v0) = (mkConst (Right (-9.81)) >>> integral v0) 
                             >>> ((integral y0) &&& mkId) 
-                            >>^ (\(y, v) -> GameObject KindPlayer (10,y) (0,v))
+                            >>^ (\(y, v) -> [GameObject KindPlayer (10,y) (0,v)])
 
 movingPlayer :: ObjectSF
-movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel) -> GameObject KindPlayer pos vel)
+movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
   where 
     makeVelocity :: Event GameInput -> Vel
     makeVelocity (Event MoveUp)    = (0,10)
@@ -50,14 +50,16 @@ movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel
     makeVelocity _ = (0,0)
 
 shot :: Pos -> Vel -> ObjectSF
-shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot)
+shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot) >>> (\o -> [o])
 
-updateGame ::  [ObjectSF] -> Wire TimeState () Identity (Event GameInput) GameOutput
-updateGame objsfs = proc input -> do
+updateGame ::  [ObjectSF] -> ObjectSF
+updateGame objsfs = mconcat objsfs
+  --   proc input -> do
   -- TODO should use objsfs
-  o1 <- movingPlayer -< input
-  o2 <- fallingBall (0,0) (0,0) -< input
-  returnA -< [o1, o2]
+  -- o1:_ <- movingPlayer -< input
+  -- o2:_ <- fallingBall (0,0) (0,0) -< input
+  -- returnA -< [o1, o2]
+  --
 -- dpSwitchB objsfs 
 --                       (arr emitter)
 --                       (\sfs input -> updateGame $ updateObjectSFs sfs input)
@@ -94,7 +96,7 @@ main = do
 -- idle :: IORef (Event Input) -> Session IO (Timed NominalDiffTime ()) -> IO ()
 idle newInput session wire = do
   (dt, session') <- stepSession session 
-  print dt
+  -- print dt
   newInput' <- get newInput
   let (Right output, wire') = runIdentity $ stepWire wire dt (Right newInput')
   render output
