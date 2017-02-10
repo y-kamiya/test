@@ -53,7 +53,18 @@ shot :: Pos -> Vel -> ObjectSF
 shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot) >>> (\o -> [o])
 
 updateGame ::  [ObjectSF] -> ObjectSF
-updateGame objsfs = mconcat objsfs
+updateGame objsfs = mconcat $ map updateSF objsfs
+  where
+    updateSF :: ObjectSF -> ObjectSF 
+    updateSF sf = dSwitch (sf &&& (nextWires sf <$> edge isShot))
+
+    nextWires :: ObjectSF -> Event GameInput -> ObjectSF
+    nextWires sf input = mconcat $ case input of
+                           Event Shot -> [shot (0,0) (0,0), sf]
+                           otherwise -> [sf]
+    isShot input = case input of
+                     Event Shot -> True
+                     otherwise -> False
   --   proc input -> do
   -- TODO should use objsfs
   -- o1:_ <- movingPlayer -< input
