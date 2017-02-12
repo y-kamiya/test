@@ -6,6 +6,7 @@ import Control.Wire.Unsafe.Event
 import Control.Concurrent
 import Unsafe.Coerce
 import Data.IORef
+import Data.Functor
 
 import Graphics.UI.GLUT hiding (Level,normalize)
 
@@ -29,7 +30,7 @@ data GameObject = GameObject {
 type GameOutput = [GameObject]
 
 type TimeState = Timed NominalDiffTime ()
-type ObjectSF = Wire TimeState () Identity (Event GameInput) GameOutput
+type ObjectSF = Wire TimeState () Identity GameInput GameOutput
 
 integrals :: (HasTime t s, Fractional a) => (a, a) -> Wire s () Identity (a, a) (a, a)
 integrals (x,y) = first (integral x) >>> second (integral y)
@@ -42,11 +43,11 @@ fallingBall (_,y0) (_,v0) = (mkConst (Right (-9.81)) >>> integral v0)
 movingPlayer :: ObjectSF
 movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
   where 
-    makeVelocity :: Event GameInput -> Vel
-    makeVelocity (Event MoveUp)    = (0,10)
-    makeVelocity (Event MoveRight) = (10,0)
-    makeVelocity (Event MoveDown)  = (0,-10)
-    makeVelocity (Event MoveLeft)  = (-10,0)
+    makeVelocity :: GameInput -> Vel
+    makeVelocity MoveUp    = (0,10)
+    makeVelocity MoveRight = (10,0)
+    makeVelocity MoveDown  = (0,-10)
+    makeVelocity MoveLeft  = (-10,0)
     makeVelocity _ = (0,0)
 
 shot :: Pos -> Vel -> ObjectSF
@@ -56,14 +57,19 @@ updateGame ::  [ObjectSF] -> ObjectSF
 updateGame objsfs = mconcat $ map updateSF objsfs
   where
     updateSF :: ObjectSF -> ObjectSF 
-    updateSF sf = dSwitch (sf &&& (nextWires sf <$> edge isShot))
+    updateSF sf = dSwitch (sf &&& wireforswitch sf)
 
-    nextWires :: ObjectSF -> Event GameInput -> ObjectSF
-    nextWires sf input = mconcat $ case input of
-                           Event Shot -> [shot (0,0) (0,0), sf]
-                           otherwise -> [sf]
+    wireforswitch :: ObjectSF -> Wire TimeState () Identity GameInput (Event ObjectSF)
+    wireforswitch sf = nextWires sf <$> edge isShot
+
+    nextWires :: ObjectSF -> Event GameInput -> Event ObjectSF
+    nextWires sf input = fmap (mconcat . input2sf) input
+      where input2sf Shot = [shot (0,0) (0,0), sf]
+            input2sf _ = [sf]
+
+    isShot :: GameInput -> Bool
     isShot input = case input of
-                     Event Shot -> True
+                     Shot -> True
                      otherwise -> False
   --   proc input -> do
   -- TODO should use objsfs
@@ -79,13 +85,13 @@ updateObjectSFs :: [ObjectSF] -> GameInput -> [ObjectSF]
 updateObjectSFs sfs Shot = shot (0,0) (0,0) : sfs
 updateObjectSFs sfs _ = sfs
 
-emitter :: (Event GameInput, GameOutput) -> Event GameInput
-emitter (input, _) = input
+-- emitter :: (Event GameInput, GameOutput) -> Event GameInput
+-- emitter (input, _) = input
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
 
-shootingScene :: Wire TimeState () Identity (Event GameInput) GameOutput
+shootingScene :: Wire TimeState () Identity GameInput GameOutput
 shootingScene = updateGame initialObjectSFs
 
 initialObjectSFs :: [ObjectSF]
