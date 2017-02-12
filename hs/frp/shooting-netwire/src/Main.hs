@@ -36,9 +36,16 @@ integrals :: (HasTime t s, Fractional a) => (a, a) -> Wire s () Identity (a, a) 
 integrals (x,y) = first (integral x) >>> second (integral y)
 
 fallingBall :: Pos -> Vel -> ObjectSF
-fallingBall (_,y0) (_,v0) = (mkConst (Right (-9.81)) >>> integral v0) 
+fallingBall (x0,y0) (vx0,vy0) = (mkConst (Right (-9.81)) >>> integral vy0) 
                             >>> ((integral y0) &&& mkId) 
-                            >>^ (\(y, v) -> [GameObject KindPlayer (10,y) (0,v)])
+                            >>^ (\(y, v) -> [GameObject KindPlayer (x0,y) (vx0,v)])
+
+bouncingBall :: Pos -> Vel -> ObjectSF
+bouncingBall pos@(_,y0) vel@(_,v0) = dSwitch bb
+  where bb = proc input -> do
+              (obj@(GameObject _ (x,y) (vx,vy)):_) <- fallingBall pos vel -< input
+              event <- edge (<= 0) -< y
+              returnA -< ([obj], event $> bouncingBall (x,-y) (vx, -0.6 * vy))
 
 movingPlayer :: ObjectSF
 movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
@@ -96,7 +103,7 @@ shootingScene = updateGame initialObjectSFs
 
 initialObjectSFs :: [ObjectSF]
 initialObjectSFs = [movingPlayer
-                   ,fallingBall (0,0) (0,0)
+                   ,bouncingBall (10,10) (0,0)
                    ]
 
 -- | Main, initializes Yampa and sets up reactimation loop
