@@ -60,8 +60,8 @@ movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel
 shot :: Pos -> Vel -> ObjectSF
 shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot) >>> (\o -> [o])
 
-updateGame ::  [ObjectSF] -> ObjectSF
-updateGame objsfs = mconcat $ map updateSF objsfs
+updateGame ::  [ObjectSF] -> [ObjectSF]
+updateGame objsfs = map updateSF objsfs
   where
     updateSF :: ObjectSF -> ObjectSF 
     updateSF sf = dSwitch (sf &&& wireforswitch sf)
@@ -71,8 +71,8 @@ updateGame objsfs = mconcat $ map updateSF objsfs
 
     nextWires :: ObjectSF -> Event GameInput -> Event ObjectSF
     nextWires sf input = fmap (mconcat . input2sf) input
-      where input2sf Shot = [shot (0,0) (0,0), sf]
-            input2sf _ = [sf]
+      where input2sf Shot = updateGame [shot (0,0) (0,10), sf]
+            input2sf _ = updateGame [sf]
 
     isShot :: GameInput -> Bool
     isShot input = case input of
@@ -99,7 +99,7 @@ mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
 
 shootingScene :: Wire TimeState () Identity GameInput GameOutput
-shootingScene = updateGame initialObjectSFs
+shootingScene = mconcat $ updateGame initialObjectSFs
 
 initialObjectSFs :: [ObjectSF]
 initialObjectSFs = [movingPlayer
