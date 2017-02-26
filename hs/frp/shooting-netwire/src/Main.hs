@@ -19,6 +19,7 @@ type R = GLdouble
 
 data ObjectKind = KindPlayer
                 | KindShot
+                | KindEnemy
                 deriving (Eq, Show)
 
 data GameObject = GameObject { 
@@ -38,7 +39,7 @@ integrals (x,y) = first (integral x) >>> second (integral y)
 fallingBall :: Pos -> Vel -> ObjectSF
 fallingBall (x0,y0) (vx0,vy0) = (mkConst (Right (-9.81)) >>> integral vy0) 
                             >>> ((integral y0) &&& mkId) 
-                            >>^ (\(y, v) -> [GameObject KindPlayer (x0,y) (vx0,v)])
+                            >>^ (\(y, v) -> [GameObject KindEnemy (x0,y) (vx0,v)])
 
 bouncingBall :: Pos -> Vel -> ObjectSF
 bouncingBall pos@(_,y0) vel@(_,v0) = dSwitch bb
@@ -64,36 +65,19 @@ updateGame ::  [ObjectSF] -> [ObjectSF]
 updateGame objsfs = map updateSF objsfs
   where
     updateSF :: ObjectSF -> ObjectSF 
-    updateSF sf = dSwitch (sf &&& wireforswitch sf)
+    updateSF sf = dkSwitch sf nextWire
 
-    wireforswitch :: ObjectSF -> Wire TimeState () Identity GameInput (Event ObjectSF)
-    wireforswitch sf = nextWires sf <$> edge isShot
+    nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
+    nextWire = proc (input, output) -> do
+      event <- edge isShot -< (input, head output)
+      returnA -< func <$> event
 
-    nextWires :: ObjectSF -> Event GameInput -> Event ObjectSF
-    nextWires sf input = fmap (mconcat . input2sf) input
-      where input2sf Shot = updateGame [shot (0,0) (0,10), sf]
-            input2sf _ = updateGame [sf]
+    func :: (GameInput,GameObject) -> ObjectSF -> ObjectSF
+    func (input, (GameObject _ pos _)) sf = updateSF $ mconcat [sf, shot pos (0,10)]
 
-    isShot :: GameInput -> Bool
-    isShot input = case input of
-                     Shot -> True
-                     otherwise -> False
-  --   proc input -> do
-  -- TODO should use objsfs
-  -- o1:_ <- movingPlayer -< input
-  -- o2:_ <- fallingBall (0,0) (0,0) -< input
-  -- returnA -< [o1, o2]
-  --
--- dpSwitchB objsfs 
---                       (arr emitter)
---                       (\sfs input -> updateGame $ updateObjectSFs sfs input)
-
-updateObjectSFs :: [ObjectSF] -> GameInput -> [ObjectSF]
-updateObjectSFs sfs Shot = shot (0,0) (0,0) : sfs
-updateObjectSFs sfs _ = sfs
-
--- emitter :: (Event GameInput, GameOutput) -> Event GameInput
--- emitter (input, _) = input
+    isShot :: (GameInput,GameObject) -> Bool
+    isShot (Shot, GameObject KindPlayer _ _) = True
+    isShot _ = False
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
@@ -184,4 +168,10 @@ render output = do
 
           renderPlayer' :: GameObject -> IO ()
           renderPlayer' GameObject {objPos = pos} = renderPlayer $ Vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
+
+          renderEnemy' :: GameObject -> IO ()
+          renderEnemy' GameObject {objPos = pos} = renderObstacle $ Vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
+
+          renderObejcts obj@(GameObject {objKind = KindPlayer}) = renderPlayer' obj
+          renderObejcts obj@(GameObject {objKind = KindEnemy}) = renderEnemy' obj
 
