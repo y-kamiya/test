@@ -48,8 +48,8 @@ bouncingBall pos@(_,y0) vel@(_,v0) = dSwitch bb
               event <- edge (<= 0) -< y
               returnA -< ([obj], event $> bouncingBall (x,-y) (vx, -0.6 * vy))
 
-movingPlayer :: ObjectSF
-movingPlayer = (arr makeVelocity) >>> (integrals (0,0) &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
+movingPlayer :: Pos -> ObjectSF
+movingPlayer pos = (arr makeVelocity) >>> (integrals pos &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
   where 
     makeVelocity :: GameInput -> Vel
     makeVelocity MoveUp    = (0,10)
@@ -69,15 +69,25 @@ updateGame objsfs = map updateSF objsfs
 
     nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
-      event <- edge isShot -< (input, head output)
+      event <- edge shouldSwitch -< (input, output)
       returnA -< func <$> event
 
-    func :: (GameInput,GameObject) -> ObjectSF -> ObjectSF
-    func (input, (GameObject _ pos _)) sf = updateSF $ mconcat [sf, shot pos (0,10)]
+    func :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
+    func (i, os) sf = updateSF $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
 
-    isShot :: (GameInput,GameObject) -> Bool
-    isShot (Shot, GameObject KindPlayer _ _) = True
-    isShot _ = False
+    createSFs (Shot, (GameObject KindPlayer pos _)) _ = [movingPlayer pos, shot pos (0,10)]
+    createSFs (_   , (GameObject KindPlayer pos _)) _ = [movingPlayer pos]
+    createSFs (_   , (GameObject KindShot pos@(_,y) vel)) _ 
+      | 10 <= y = []
+      | otherwise = [shot pos vel]
+    createSFs (_   , (GameObject KindEnemy pos vel)) _ = [bouncingBall pos vel]
+
+    shouldSwitch :: (GameInput,GameOutput) -> Bool
+    shouldSwitch (i, os) = foldl (\acc o -> or [acc, judge (i,o)]) False os
+      where
+        judge (Shot, GameObject KindPlayer _ _) = True
+        judge (_, GameObject KindShot _ _) = True
+        judge _ = False
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
@@ -86,7 +96,7 @@ shootingScene :: Wire TimeState () Identity GameInput GameOutput
 shootingScene = mconcat $ updateGame initialObjectSFs
 
 initialObjectSFs :: [ObjectSF]
-initialObjectSFs = [movingPlayer
+initialObjectSFs = [movingPlayer (0,0)
                    ,bouncingBall (10,10) (0,0)
                    ]
 
