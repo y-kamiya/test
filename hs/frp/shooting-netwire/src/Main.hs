@@ -61,19 +61,16 @@ movingPlayer pos = (arr makeVelocity) >>> (integrals pos &&& mkId) >>^ (\(pos, v
 shot :: Pos -> Vel -> ObjectSF
 shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot) >>> (\o -> [o])
 
-updateGame ::  [ObjectSF] -> [ObjectSF]
-updateGame objsfs = map updateSF objsfs
+updateGame ::  ObjectSF -> ObjectSF
+updateGame sf = dkSwitch sf nextWire
   where
-    updateSF :: ObjectSF -> ObjectSF 
-    updateSF sf = dkSwitch sf nextWire
-
     nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
       event <- edge shouldSwitch -< (input, output)
       returnA -< func <$> event
 
     func :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
-    func (i, os) sf = updateSF $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
+    func (i, os) sf = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
 
     createSFs (Shot, (GameObject KindPlayer pos _)) _ = [movingPlayer pos, shot pos (0,10)]
     createSFs (_   , (GameObject KindPlayer pos _)) _ = [movingPlayer pos]
@@ -86,19 +83,17 @@ updateGame objsfs = map updateSF objsfs
     shouldSwitch (i, os) = foldl (\acc o -> or [acc, judge (i,o)]) False os
       where
         judge (Shot, GameObject KindPlayer _ _) = True
-        judge (_, GameObject KindShot _ _) = True
+        -- judge (_, GameObject KindShot _ _) = True
         judge _ = False
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
 
 shootingScene :: Wire TimeState () Identity GameInput GameOutput
-shootingScene = mconcat $ updateGame initialObjectSFs
+shootingScene = updateGame initialObjectSFs
 
-initialObjectSFs :: [ObjectSF]
-initialObjectSFs = [movingPlayer (0,0)
-                   ,bouncingBall (10,10) (0,0)
-                   ]
+initialObjectSFs :: ObjectSF
+initialObjectSFs = mconcat [movingPlayer (0,0) ,bouncingBall (10,10) (0,0)]
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
