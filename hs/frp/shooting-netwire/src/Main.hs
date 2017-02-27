@@ -67,23 +67,23 @@ updateGame sf = dkSwitch sf nextWire
     nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
       event <- edge shouldSwitch -< (input, output)
-      returnA -< func <$> event
+      returnA -< updateSF <$> event
 
-    func :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
-    func (i, os) sf = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
-
-    createSFs (Shot, (GameObject KindPlayer pos _)) _ = [movingPlayer pos, shot pos (0,10)]
-    createSFs (_   , (GameObject KindPlayer pos _)) _ = [movingPlayer pos]
-    createSFs (_   , (GameObject KindShot pos@(_,y) vel)) _ 
-      | 10 <= y = []
-      | otherwise = [shot pos vel]
-    createSFs (_   , (GameObject KindEnemy pos vel)) _ = [bouncingBall pos vel]
+    updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
+    updateSF (i, os) sf = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
+      where
+        createSFs (Shot, (GameObject KindPlayer pos _)) _ = [movingPlayer pos, shot pos (0,10)]
+        createSFs (_   , (GameObject KindPlayer pos _)) _ = [movingPlayer pos]
+        createSFs (_   , (GameObject KindShot pos@(_,y) vel)) _ 
+          | 10 <= y = []
+          | otherwise = [shot pos vel]
+        createSFs (_   , (GameObject KindEnemy pos vel)) _ = [bouncingBall pos vel]
 
     shouldSwitch :: (GameInput,GameOutput) -> Bool
     shouldSwitch (i, os) = foldl (\acc o -> or [acc, judge (i,o)]) False os
       where
         judge (Shot, GameObject KindPlayer _ _) = True
-        -- judge (_, GameObject KindShot _ _) = True
+        judge (_, GameObject KindShot (_,y) _) | 10 <= y = True
         judge _ = False
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
