@@ -89,6 +89,9 @@ updateGame sf = dkSwitch sf nextWire
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> shootingScene
 
+-- selectScene :: ObjectSF
+-- selectScene = arr $ \input -> case 
+
 shootingScene :: Wire TimeState () Identity GameInput GameOutput
 shootingScene = updateGame initialObjectSFs
 
@@ -98,30 +101,35 @@ initialObjectSFs = mconcat [movingPlayer (0,0) ,bouncingBall (10,10) (0,0)]
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
 main = do
-    initGL
+    window <- initGL
     displayCallback $= return ()
     newInput <- newIORef NoEvent
     keyboardMouseCallback $= Just 
         (\k ks m _ -> writeIORef newInput (Event $ Keyboard k ks m))
-    idleCallback $= Just (idle newInput clockSession_ mainSF)
+    idleCallback $= Just (idle window newInput clockSession_ mainSF)
     mainLoop
 
--- idle :: IORef (Event Input) -> Session IO (Timed NominalDiffTime ()) -> IO ()
-idle newInput session wire = do
+-- idle :: Window -> IORef (Event Input) -> Session IO TimeState -> Wire TimeState () Identity (Event Input) GameOutput -> IO ()
+idle window newInput session wire = do
   (dt, session') <- stepSession session 
   -- print dt
   newInput' <- get newInput
-  let (Right output, wire') = runIdentity $ stepWire wire dt (Right newInput')
-  render output
-  idleCallback $= Just (idle newInput session' wire')
+  eOutput <- runIdentity $ stepWire wire dt (Right newInput')
+  case eOutput of
+    (Left _, _) -> do
+      destroyWindow window
+      idleCallback $= Nothing
+    (Right output, wire') -> do
+      render output
+      idleCallback $= Just (idle window newInput session' wire')
 
 
 
 -- graphics
-initGL :: IO ()
+initGL :: IO Window
 initGL = do
     getArgsAndInitialize
-    createWindow "Bounce"
+    window <- createWindow "Bounce"
     initialDisplayMode $= [ WithDepthBuffer, DoubleBuffered ]
     depthFunc          $= Just Less
     clearColor         $= Color4 0 0 0 0
@@ -133,7 +141,7 @@ initGL = do
     blendFunc          $= (SrcAlpha, OneMinusSrcAlpha)
     colorMaterial      $= Just (FrontAndBack, AmbientAndDiffuse)
     reshapeCallback    $= Just resizeScene
-    return ()
+    return window
 
 resizeScene :: Size -> IO ()
 resizeScene (Size w 0) = resizeScene (Size w 1) -- prevent divide by zero
