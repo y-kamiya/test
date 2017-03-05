@@ -114,7 +114,7 @@ idle window newInput session wire = do
   (dt, session') <- stepSession session 
   -- print dt
   newInput' <- get newInput
-  eOutput <- runIdentity $ stepWire wire dt (Right newInput')
+  let eOutput = runIdentity $ stepWire wire dt (Right newInput')
   case eOutput of
     (Left _, _) -> do
       destroyWindow window
@@ -122,8 +122,6 @@ idle window newInput session wire = do
     (Right output, wire') -> do
       render output
       idleCallback $= Just (idle window newInput session' wire')
-
-
 
 -- graphics
 initGL :: IO Window
