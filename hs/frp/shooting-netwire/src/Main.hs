@@ -87,7 +87,7 @@ updateGame sf = dkSwitch sf nextWire
         judge _ = False
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
-mainSF = parseInput >>> shootingScene
+mainSF = parseInput >>> unless (==GameMenu) >>> shootingScene
 
 -- selectScene :: ObjectSF
 -- selectScene = arr $ \input -> case 
