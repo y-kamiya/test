@@ -59,7 +59,7 @@ movingPlayer pos = (arr makeVelocity) >>> (integrals pos &&& mkId) >>^ (\(pos, v
     makeVelocity _ = (0,0)
 
 shot :: Pos -> Vel -> ObjectSF
-shot p0 v0 = mkConst (Right v0) >>> ((integrals p0) &&& mkId) >>^ uncurry (GameObject KindShot) >>> (\o -> [o])
+shot p0 v0 = mkConst (Right v0) >>> (integrals p0 &&& mkId) >>^ uncurry (GameObject KindShot) >>> (:[])
 
 updateGame ::  ObjectSF -> ObjectSF
 updateGame sf = dkSwitch sf nextWire
@@ -72,15 +72,15 @@ updateGame sf = dkSwitch sf nextWire
     updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
     updateSF (i, os) sf = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
       where
-        createSFs (Shot, (GameObject KindPlayer pos _)) _ = [movingPlayer pos, shot pos (0,10)]
-        createSFs (_   , (GameObject KindPlayer pos _)) _ = [movingPlayer pos]
-        createSFs (_   , (GameObject KindShot pos@(_,y) vel)) _ 
+        createSFs (Shot, GameObject KindPlayer pos _) _ = [movingPlayer pos, shot pos (0,10)]
+        createSFs (_   , GameObject KindPlayer pos _) _ = [movingPlayer pos]
+        createSFs (_   , GameObject KindShot pos@(_,y) vel) _ 
           | 10 <= y = []
           | otherwise = [shot pos vel]
-        createSFs (_   , (GameObject KindEnemy pos vel)) _ = [bouncingBall pos vel]
+        createSFs (_   , GameObject KindEnemy pos vel) _ = [bouncingBall pos vel]
 
     shouldSwitch :: (GameInput,GameOutput) -> Bool
-    shouldSwitch (i, os) = foldl (\acc o -> or [acc, judge (i,o)]) False os
+    shouldSwitch (i, os) = foldl (\acc o -> acc || judge (i,o)) False os
       where
         judge (Shot, GameObject KindPlayer _ _) = True
         judge (_, GameObject KindShot (_,y) _) | 10 <= y = True
