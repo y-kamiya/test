@@ -70,7 +70,7 @@ updateGame sf = dkSwitch sf nextWire
       returnA -< updateSF <$> event
 
     updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
-    updateSF (i, os) sf = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
+    updateSF (i, os) sf = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ updateByCollide os
       where
         createSFs (Shot, GameObject KindPlayer pos _) _ = [movingPlayer pos, shot pos (0,10)]
         createSFs (_   , GameObject KindPlayer pos _) _ = [movingPlayer pos]
@@ -85,6 +85,17 @@ updateGame sf = dkSwitch sf nextWire
         judge (Shot, GameObject KindPlayer _ _) = True
         judge (_, GameObject KindShot (_,y) _) | 10 <= y = True
         judge _ = False
+
+    updateByCollide :: GameOutput -> GameOutput
+    updateByCollide os = filter (notCollide os) os
+      where
+        notCollide :: GameOutput -> GameObject -> Bool
+        notCollide os (GameObject KindPlayer pos _) = not $ any (collide 2 pos . objPos) $ filter ((== KindEnemy) . objKind) os
+        notCollide _ _ = True
+
+collide :: Double -> Pos -> Pos -> Bool
+collide r (x1,y1) (x2,y2) = d < r
+  where d = sqrt $ ((x2-x1)^2) + ((y2-y1)^2)
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> unless (==GameMenu) >>> shootingScene
@@ -160,7 +171,7 @@ render output = do
     clear [ ColorBuffer, DepthBuffer ]
     loadIdentity
     print output
-    mapM_ renderPlayer' output
+    mapM_ renderObjects output
     flush
     where size2 :: R
           size2 = 6 / 2
@@ -174,6 +185,7 @@ render output = do
             renderObject Solid s
           renderObstacle = (color green >>) . renderShapeAt (Cube 1)
           renderPlayer   = (color red >>) . renderShapeAt (Sphere' 0.5 20 20)
+          renderShot     = (color green >>) . renderShapeAt (Sphere' 0.5 5 5)
           renderGoal     =
             (color greenG >>) . renderShapeAt (Sphere' 0.5 20 20)
 
@@ -183,6 +195,10 @@ render output = do
           renderEnemy' :: GameObject -> IO ()
           renderEnemy' GameObject {objPos = pos} = renderObstacle $ Vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
 
-          renderObejcts obj@(GameObject {objKind = KindPlayer}) = renderPlayer' obj
-          renderObejcts obj@(GameObject {objKind = KindEnemy}) = renderEnemy' obj
+          renderShot' :: GameObject -> IO ()
+          renderShot' GameObject {objPos = pos} = renderShot $ Vector3 (fst pos) (unsafeCoerce (snd pos)) (-30)
+
+          renderObjects obj@(GameObject {objKind = KindPlayer}) = renderPlayer' obj
+          renderObjects obj@(GameObject {objKind = KindEnemy}) = renderEnemy' obj
+          renderObjects obj@(GameObject {objKind = KindShot}) = renderShot' obj
 
