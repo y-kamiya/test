@@ -7,6 +7,7 @@ import Control.Concurrent
 import Unsafe.Coerce
 import Data.IORef
 import Data.Functor
+import Data.List (find)
 
 import Graphics.UI.GLUT hiding (Level,normalize)
 
@@ -66,11 +67,14 @@ updateGame sf = dkSwitch sf nextWire
   where
     nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
-      event <- edge shouldSwitch -< (input, output)
+      let output' = updateByCollide output
+      event <- edge shouldSwitch -< (input, output')
       returnA -< updateSF <$> event
 
     updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
-    updateSF (i, os) sf = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ updateByCollide os
+    updateSF (i, os) sf 
+      | find ((== KindPlayer) . objKind) os == Nothing = inhibit ()
+      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
       where
         createSFs (Shot, GameObject KindPlayer pos _) _ = [movingPlayer pos, shot pos (0,10)]
         createSFs (_   , GameObject KindPlayer pos _) _ = [movingPlayer pos]
@@ -100,9 +104,6 @@ collide r (x1,y1) (x2,y2) = d < r
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> unless (==GameMenu) >>> shootingScene
 
--- selectScene :: ObjectSF
--- selectScene = arr $ \input -> case 
-
 shootingScene :: Wire TimeState () Identity GameInput GameOutput
 shootingScene = updateGame initialObjectSFs
 
@@ -120,7 +121,7 @@ main = do
     idleCallback $= Just (idle window newInput clockSession_ mainSF)
     mainLoop
 
--- idle :: Window -> IORef (Event Input) -> Session IO TimeState -> Wire TimeState () Identity (Event Input) GameOutput -> IO ()
+idle :: Window -> IORef (Event Input) -> Session IO TimeState -> Wire TimeState () Identity (Event Input) GameOutput -> IO ()
 idle window newInput session wire = do
   (dt, session') <- stepSession session 
   -- print dt
@@ -128,8 +129,7 @@ idle window newInput session wire = do
   let eOutput = runIdentity $ stepWire wire dt (Right newInput')
   case eOutput of
     (Left _, _) -> do
-      destroyWindow window
-      idleCallback $= Nothing
+      idleCallback $= Just (idle window newInput clockSession_ mainSF)
     (Right output, wire') -> do
       render output
       idleCallback $= Just (idle window newInput session' wire')
