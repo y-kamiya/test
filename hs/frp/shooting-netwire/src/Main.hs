@@ -8,6 +8,7 @@ import Unsafe.Coerce
 import Data.IORef
 import Data.Functor
 import Data.List (find)
+import Data.Maybe (isNothing)
 
 import Graphics.UI.GLUT hiding (Level,normalize)
 
@@ -67,14 +68,13 @@ updateGame sf = dkSwitch sf nextWire
   where
     nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
-      let output' = updateByCollide output
-      event <- edge shouldSwitch -< (input, output')
+      event <- edge shouldSwitch -< (input, output)
       returnA -< updateSF <$> event
 
     updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
     updateSF (i, os) sf 
-      | find ((== KindPlayer) . objKind) os == Nothing = inhibit ()
-      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] os
+      | isNothing (find ((== KindPlayer) . objKind) os) = inhibit ()
+      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ updateByCollide os
       where
         createSFs (Shot, GameObject KindPlayer pos _) _ = [movingPlayer pos, shot pos (0,10)]
         createSFs (_   , GameObject KindPlayer pos _) _ = [movingPlayer pos]
@@ -84,22 +84,25 @@ updateGame sf = dkSwitch sf nextWire
         createSFs (_   , GameObject KindEnemy pos vel) _ = [bouncingBall pos vel]
 
     shouldSwitch :: (GameInput,GameOutput) -> Bool
-    shouldSwitch (i, os) = foldl (\acc o -> acc || judge (i,o)) False os
+    shouldSwitch (i, os) =  isCollide || isCreatedOrDeleted
       where
+        isCollide = foldl (\acc o -> acc || collide os o) False os
+        isCreatedOrDeleted = foldl (\acc o -> acc || judge (i,o)) False os
+
         judge (Shot, GameObject KindPlayer _ _) = True
         judge (_, GameObject KindShot (_,y) _) | 10 <= y = True
         judge _ = False
 
     updateByCollide :: GameOutput -> GameOutput
-    updateByCollide os = filter (notCollide os) os
-      where
-        notCollide :: GameOutput -> GameObject -> Bool
-        notCollide os (GameObject KindPlayer pos _) = not $ any (collide 2 pos . objPos) $ filter ((== KindEnemy) . objKind) os
-        notCollide _ _ = True
+    updateByCollide os = filter (not . collide os) os
 
-collide :: Double -> Pos -> Pos -> Bool
-collide r (x1,y1) (x2,y2) = d < r
-  where d = sqrt $ ((x2-x1)^2) + ((y2-y1)^2)
+    collide :: GameOutput -> GameObject -> Bool
+    collide os (GameObject KindPlayer pos _) = any (collideAt 1 pos . objPos) $ filter ((== KindEnemy) . objKind) os
+    collide _ _ = False
+
+    collideAt :: Double -> Pos -> Pos -> Bool
+    collideAt r (x1,y1) (x2,y2) = d < r
+      where d = sqrt $ ((x2-x1)^2) + ((y2-y1)^2)
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
 mainSF = parseInput >>> unless (==GameMenu) >>> shootingScene
