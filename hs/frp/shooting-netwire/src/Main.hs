@@ -98,6 +98,8 @@ updateGame sf = dkSwitch sf nextWire
 
     collide :: GameOutput -> GameObject -> Bool
     collide os (GameObject KindPlayer pos _) = any (collideAt 1 pos . objPos) $ filter ((== KindEnemy) . objKind) os
+    collide os (GameObject KindEnemy pos _) = any (collideAt 1 pos . objPos) $ filter ((== KindShot) . objKind) os
+    collide os (GameObject KindShot pos _) = any (collideAt 1 pos . objPos) $ filter ((== KindEnemy) . objKind) os
     collide _ _ = False
 
     collideAt :: Double -> Pos -> Pos -> Bool
