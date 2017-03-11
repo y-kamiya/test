@@ -15,6 +15,7 @@ data GameInput = MoveUp
                | MoveLeft 
                | Shot 
                | GameMenu
+               | PopEnemy
                | NoInput
                deriving (Eq, Show)
 
@@ -39,4 +40,5 @@ translateInput (Event (Keyboard {key = SpecialKey KeyDown })) = MoveDown
 translateInput (Event (Keyboard {key = SpecialKey KeyLeft })) = MoveLeft
 translateInput (Event (Keyboard {key = Char 's' })) = Shot
 translateInput (Event (Keyboard {key = Char 'Q' })) = GameMenu
+translateInput (Event (Keyboard {key = Char 'p' })) = PopEnemy
 translateInput _  = NoInput

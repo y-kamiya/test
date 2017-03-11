@@ -38,6 +38,9 @@ type ObjectSF = Wire TimeState () Identity GameInput GameOutput
 integrals :: (HasTime t s, Fractional a) => (a, a) -> Wire s () Identity (a, a) (a, a)
 integrals (x,y) = first (integral x) >>> second (integral y)
 
+simpleEnemy :: Pos -> Vel -> ObjectSF
+simpleEnemy (x0,y0) (vx0,vy0) = mkConst (Right vy0) >>> integral y0 >>^ (\y -> [GameObject KindEnemy (x0,y) (vx0,vy0)])
+
 fallingBall :: Pos -> Vel -> ObjectSF
 fallingBall (x0,y0) (vx0,vy0) = (mkConst (Right (-9.81)) >>> integral vy0) 
                             >>> ((integral y0) &&& mkId) 
@@ -51,7 +54,11 @@ bouncingBall pos@(_,y0) vel@(_,v0) = dSwitch bb
               returnA -< ([obj], event $> bouncingBall (x,-y) (vx, -0.6 * vy))
 
 movingPlayer :: Pos -> ObjectSF
-movingPlayer pos = (arr makeVelocity) >>> (integrals pos &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
+movingPlayer pos = proc input -> do
+  vel' <- arr makeVelocity -< input
+  pos' <- integrals pos -< vel'
+  returnA -< createOutput pos' vel' input
+    -- (arr makeVelocity) >>> (integrals pos &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
   where 
     makeVelocity :: GameInput -> Vel
     makeVelocity MoveUp    = (0,10)
@@ -59,6 +66,10 @@ movingPlayer pos = (arr makeVelocity) >>> (integrals pos &&& mkId) >>^ (\(pos, v
     makeVelocity MoveDown  = (0,-10)
     makeVelocity MoveLeft  = (-10,0)
     makeVelocity _ = (0,0)
+
+    createOutput :: Pos -> Vel -> GameInput -> GameOutput
+    createOutput pos vel Shot = [GameObject KindPlayer pos vel, GameObject KindShot pos (0,10)]
+    createOutput pos vel _ = [GameObject KindPlayer pos vel]
 
 shot :: Pos -> Vel -> ObjectSF
 shot p0 v0 = mkConst (Right v0) >>> (integrals p0 &&& mkId) >>^ uncurry (GameObject KindShot) >>> (:[])
@@ -68,20 +79,20 @@ updateGame sf = dkSwitch sf nextWire
   where
     nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
+      -- popEvent <- periodic 1 -< PopEnemy
       event <- edge shouldSwitch -< (input, output)
       returnA -< updateSF <$> event
 
     updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
     updateSF (i, os) sf 
       | isNothing (find ((== KindPlayer) . objKind) os) = inhibit ()
-      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ updateByCollide os
+      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ addNewObjects i os ++ (updateByOut $ updateByCollide os)
+      -- | otherwise = updateGame $ mconcat $ updateByOut $ updateByCollide os
       where
-        createSFs (Shot, GameObject KindPlayer pos _) _ = [movingPlayer pos, shot pos (0,10)]
-        createSFs (_   , GameObject KindPlayer pos _) _ = [movingPlayer pos]
-        createSFs (_   , GameObject KindShot pos@(_,y) vel) _ 
-          | 10 <= y = []
-          | otherwise = [shot pos vel]
-        createSFs (_   , GameObject KindEnemy pos vel) _ = [bouncingBall pos vel]
+        createSFs (_, GameObject KindEnemy pos vel) _ = [simpleEnemy pos vel]
+        createSFs (_, GameObject KindPlayer pos _) _  = [movingPlayer pos]
+        createSFs (_, GameObject KindShot pos vel) _  = [shot pos vel]
+        -- createSFs (_   , GameObject KindEnemy pos vel) _ = [bouncingBall pos vel]
 
     shouldSwitch :: (GameInput,GameOutput) -> Bool
     shouldSwitch (i, os) =  isCollide || isCreatedOrDeleted
@@ -89,9 +100,27 @@ updateGame sf = dkSwitch sf nextWire
         isCollide = foldl (\acc o -> acc || collide os o) False os
         isCreatedOrDeleted = foldl (\acc o -> acc || judge (i,o)) False os
 
-        judge (Shot, GameObject KindPlayer _ _) = True
-        judge (_, GameObject KindShot (_,y) _) | 10 <= y = True
+        judge (Shot, _) = True
+        judge (PopEnemy, _) = True
+        judge (_, GameObject KindShot pos _) | isOut pos = True
+        judge (_, GameObject KindEnemy pos _) | isOut pos = True
         judge _ = False
+
+    addNewObjects :: GameInput -> GameOutput -> GameOutput
+    addNewObjects PopEnemy _ = [GameObject KindEnemy (0,20) (0,-10)]
+    addNewObjects _ _ = []
+
+    updateByOut :: GameOutput -> GameOutput
+    updateByOut os = filter (not . outside) os
+      where
+        outside (GameObject KindEnemy pos _) | isOut pos = True
+        outside (GameObject KindShot pos _) | isOut pos = True
+        outside  _ = False
+
+    isOut :: Pos -> Bool
+    isOut (_,y) 
+      | y < -20 || 20 < y = True
+      | otherwise = False 
 
     updateByCollide :: GameOutput -> GameOutput
     updateByCollide os = filter (not . collide os) os
@@ -113,7 +142,7 @@ shootingScene :: Wire TimeState () Identity GameInput GameOutput
 shootingScene = updateGame initialObjectSFs
 
 initialObjectSFs :: ObjectSF
-initialObjectSFs = mconcat [movingPlayer (0,0) ,bouncingBall (10,10) (0,0)]
+initialObjectSFs = mconcat [movingPlayer (0,0)] -- ,bouncingBall (10,10) (0,0)]
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
