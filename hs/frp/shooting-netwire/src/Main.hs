@@ -79,20 +79,8 @@ updateGame sf = dkSwitch sf nextWire
   where
     nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
-      -- popEvent <- periodic 1 -< PopEnemy
       event <- edge shouldSwitch -< (input, output)
       returnA -< updateSF <$> event
-
-    updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
-    updateSF (i, os) sf 
-      | isNothing (find ((== KindPlayer) . objKind) os) = inhibit ()
-      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ addNewObjects i os ++ (updateByOut $ updateByCollide os)
-      -- | otherwise = updateGame $ mconcat $ updateByOut $ updateByCollide os
-      where
-        createSFs (_, GameObject KindEnemy pos vel) _ = [simpleEnemy pos vel]
-        createSFs (_, GameObject KindPlayer pos _) _  = [movingPlayer pos]
-        createSFs (_, GameObject KindShot pos vel) _  = [shot pos vel]
-        -- createSFs (_   , GameObject KindEnemy pos vel) _ = [bouncingBall pos vel]
 
     shouldSwitch :: (GameInput,GameOutput) -> Bool
     shouldSwitch (i, os) =  isCollide || isCreatedOrDeleted
@@ -105,6 +93,17 @@ updateGame sf = dkSwitch sf nextWire
         judge (_, GameObject KindShot pos _) | isOut pos = True
         judge (_, GameObject KindEnemy pos _) | isOut pos = True
         judge _ = False
+
+    updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
+    updateSF (i, os) sf 
+      | isNothing (find ((== KindPlayer) . objKind) os) = inhibit ()
+      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ addNewObjects i os ++ (updateByOut $ updateByCollide os)
+      -- | otherwise = updateGame $ mconcat $ updateByOut $ updateByCollide os
+      where
+        createSFs (_, GameObject KindEnemy pos vel) _ = [simpleEnemy pos vel]
+        createSFs (_, GameObject KindPlayer pos _) _  = [movingPlayer pos]
+        createSFs (_, GameObject KindShot pos vel) _  = [shot pos vel]
+        -- createSFs (_   , GameObject KindEnemy pos vel) _ = [bouncingBall pos vel]
 
     addNewObjects :: GameInput -> GameOutput -> GameOutput
     addNewObjects PopEnemy _ = [GameObject KindEnemy (0,20) (0,-10)]
@@ -136,7 +135,12 @@ updateGame sf = dkSwitch sf nextWire
       where d = sqrt $ ((x2-x1)^2) + ((y2-y1)^2)
 
 mainSF :: Wire TimeState () Identity (Event Input) GameOutput
-mainSF = parseInput >>> unless (==GameMenu) >>> shootingScene
+mainSF = parseInput >>> systemInput >>> arr getInput >>> unless (==GameMenu) >>> shootingScene
+
+systemInput :: Wire TimeState () Identity (Event GameInput) (Event GameInput)
+systemInput = proc input -> do
+  popEnemyEvent <- periodic 1 -< PopEnemy
+  returnA -< mergeL input popEnemyEvent
 
 shootingScene :: Wire TimeState () Identity GameInput GameOutput
 shootingScene = updateGame initialObjectSFs

@@ -1,5 +1,6 @@
 {-# LANGUAGE Arrows #-}
 module Input ( parseInput
+             , getInput
              , Input(..)
              , GameInput(..)
              ) where
@@ -27,18 +28,22 @@ data Input = Keyboard { key       :: Key,
 filterKeyDowns :: (HasTime t s) => Wire s () Identity (Event Input) (Event Input)
 filterKeyDowns = filterE ((==Down) . keyState)
 
-parseInput :: (HasTime t s) => Wire s () Identity (Event Input) GameInput
+parseInput :: (HasTime t s) => Wire s () Identity (Event Input) (Event GameInput)
 parseInput = proc i -> do
     down <- filterKeyDowns          -< i
-    gameEvent <- arr translateInput -< down
+    gameEvent <- arr (fmap translateInput) -< down
     returnA -< gameEvent
 
-translateInput :: Event Input -> GameInput
-translateInput (Event (Keyboard {key = SpecialKey KeyUp   })) = MoveUp
-translateInput (Event (Keyboard {key = SpecialKey KeyRight})) = MoveRight
-translateInput (Event (Keyboard {key = SpecialKey KeyDown })) = MoveDown
-translateInput (Event (Keyboard {key = SpecialKey KeyLeft })) = MoveLeft
-translateInput (Event (Keyboard {key = Char 's' })) = Shot
-translateInput (Event (Keyboard {key = Char 'Q' })) = GameMenu
-translateInput (Event (Keyboard {key = Char 'p' })) = PopEnemy
+translateInput :: Input -> GameInput
+translateInput (Keyboard {key = SpecialKey KeyUp   }) = MoveUp
+translateInput (Keyboard {key = SpecialKey KeyRight}) = MoveRight
+translateInput (Keyboard {key = SpecialKey KeyDown }) = MoveDown
+translateInput (Keyboard {key = SpecialKey KeyLeft }) = MoveLeft
+translateInput (Keyboard {key = Char 's' }) = Shot
+translateInput (Keyboard {key = Char 'Q' }) = GameMenu
+translateInput (Keyboard {key = Char 'p' }) = PopEnemy
 translateInput _  = NoInput
+
+getInput :: Event GameInput -> GameInput
+getInput (Event a) = a
+getInput noEvent = NoInput
