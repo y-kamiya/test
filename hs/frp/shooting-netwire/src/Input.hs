@@ -10,15 +10,7 @@ import Control.Wire
 import Control.Wire.Unsafe.Event
 import Graphics.UI.GLUT
 
-data GameInput = MoveUp 
-               | MoveRight 
-               | MoveDown 
-               | MoveLeft 
-               | Shot 
-               | GameMenu
-               | PopEnemy
-               | NoInput
-               deriving (Eq, Show)
+import Types
 
 data Input = Keyboard { key       :: Key,
                         keyState  :: KeyState,

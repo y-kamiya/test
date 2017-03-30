@@ -17,6 +17,9 @@ executable shooting-netwire
   hs-source-dirs:      src
   main-is:             Main.hs
   other-modules:       Input
+                     , Game
+                     , Graphics
+                     , Types
   build-depends:       netwire
                      , GLUT
   default-language:    Haskell2010
