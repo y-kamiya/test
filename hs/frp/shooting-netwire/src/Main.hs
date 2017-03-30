@@ -41,24 +41,11 @@ integrals (x,y) = first (integral x) >>> second (integral y)
 simpleEnemy :: Pos -> Vel -> ObjectSF
 simpleEnemy (x0,y0) (vx0,vy0) = mkConst (Right vy0) >>> integral y0 >>^ (\y -> [GameObject KindEnemy (x0,y) (vx0,vy0)])
 
-fallingBall :: Pos -> Vel -> ObjectSF
-fallingBall (x0,y0) (vx0,vy0) = (mkConst (Right (-9.81)) >>> integral vy0) 
-                            >>> ((integral y0) &&& mkId) 
-                            >>^ (\(y, v) -> [GameObject KindEnemy (x0,y) (vx0,v)])
-
-bouncingBall :: Pos -> Vel -> ObjectSF
-bouncingBall pos@(_,y0) vel@(_,v0) = dSwitch bb
-  where bb = proc input -> do
-              (obj@(GameObject _ (x,y) (vx,vy)):_) <- fallingBall pos vel -< input
-              event <- edge (<= 0) -< y
-              returnA -< ([obj], event $> bouncingBall (x,-y) (vx, -0.6 * vy))
-
 movingPlayer :: Pos -> ObjectSF
 movingPlayer pos = proc input -> do
   vel' <- arr makeVelocity -< input
   pos' <- integrals pos -< vel'
   returnA -< createOutput pos' vel' input
-    -- (arr makeVelocity) >>> (integrals pos &&& mkId) >>^ (\(pos, vel) -> [GameObject KindPlayer pos vel])
   where 
     makeVelocity :: GameInput -> Vel
     makeVelocity MoveUp    = (0,10)
@@ -97,17 +84,15 @@ updateGame sf = dkSwitch sf nextWire
     updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
     updateSF (i, os) sf 
       | isNothing (find ((== KindPlayer) . objKind) os) = inhibit ()
-      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ addNewObjects i os ++ (updateByOut $ updateByCollide os)
-      -- | otherwise = updateGame $ mconcat $ updateByOut $ updateByCollide os
+      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ addNewObjects i ++ (updateByOut $ updateByCollide os)
       where
         createSFs (_, GameObject KindEnemy pos vel) _ = [simpleEnemy pos vel]
         createSFs (_, GameObject KindPlayer pos _) _  = [movingPlayer pos]
         createSFs (_, GameObject KindShot pos vel) _  = [shot pos vel]
-        -- createSFs (_   , GameObject KindEnemy pos vel) _ = [bouncingBall pos vel]
 
-    addNewObjects :: GameInput -> GameOutput -> GameOutput
-    addNewObjects PopEnemy _ = [GameObject KindEnemy (0,20) (0,-10)]
-    addNewObjects _ _ = []
+    addNewObjects :: GameInput -> GameOutput
+    addNewObjects PopEnemy = [GameObject KindEnemy (0,20) (0,-10)]
+    addNewObjects _ = []
 
     updateByOut :: GameOutput -> GameOutput
     updateByOut os = filter (not . outside) os
@@ -128,7 +113,6 @@ updateGame sf = dkSwitch sf nextWire
     collide os (GameObject KindPlayer pos _) = any (collideAt 1 pos . objPos) $ filter ((== KindEnemy) . objKind) os
     collide os (GameObject KindEnemy pos _) = any (collideAt 1 pos . objPos) $ filter ((== KindShot) . objKind) os
     collide os (GameObject KindShot pos _) = any (collideAt 1 pos . objPos) $ filter ((== KindEnemy) . objKind) os
-    collide _ _ = False
 
     collideAt :: Double -> Pos -> Pos -> Bool
     collideAt r (x1,y1) (x2,y2) = d < r
@@ -146,7 +130,7 @@ shootingScene :: Wire TimeState () Identity GameInput GameOutput
 shootingScene = updateGame initialObjectSFs
 
 initialObjectSFs :: ObjectSF
-initialObjectSFs = mconcat [movingPlayer (0,0)] -- ,bouncingBall (10,10) (0,0)]
+initialObjectSFs = mconcat [movingPlayer (0,0)]
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
