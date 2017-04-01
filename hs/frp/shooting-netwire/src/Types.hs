@@ -7,6 +7,8 @@ type Pos = (Double, Double)
 type Vel = (Double, Double)
 type R = GLdouble
 
+type SF a b = Wire TimeState () Identity a b
+
 data GameInput = MoveUp 
                | MoveRight 
                | MoveDown 
@@ -35,6 +37,6 @@ type GameOutput = [GameObject]
 
 type TimeState = Timed NominalDiffTime ()
 
-type ObjectSF = Wire TimeState () Identity GameInput GameOutput
+type ObjectSF = SF GameInput GameOutput
 
 

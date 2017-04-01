@@ -12,7 +12,7 @@ import Graphics.UI.GLUT hiding (Level,normalize)
 import Types
 import Input
 
-integrals :: (HasTime t s, Fractional a) => (a, a) -> Wire s () Identity (a, a) (a, a)
+integrals :: (Fractional a) => (a, a) -> SF (a, a) (a, a)
 integrals (x,y) = first (integral x) >>> second (integral y)
 
 simpleEnemy :: Pos -> Vel -> ObjectSF
@@ -41,7 +41,7 @@ shot p0 v0 = mkConst (Right v0) >>> (integrals p0 &&& mkId) >>^ uncurry (GameObj
 updateGame ::  ObjectSF -> ObjectSF
 updateGame sf = dkSwitch sf nextWire
   where
-    nextWire :: Wire TimeState () Identity (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
+    nextWire :: SF (GameInput, GameOutput) (Event (ObjectSF -> ObjectSF))
     nextWire = proc (input, output) -> do
       event <- edge shouldSwitch -< (input, output)
       returnA -< updateSF <$> event
@@ -95,15 +95,15 @@ updateGame sf = dkSwitch sf nextWire
     collideAt r (x1,y1) (x2,y2) = d < r
       where d = sqrt $ ((x2-x1)^2) + ((y2-y1)^2)
 
-mainSF :: Wire TimeState () Identity (Event Input) GameOutput
+mainSF :: SF (Event Input) GameOutput
 mainSF = parseInput >>> systemInput >>> arr getInput >>> unless (==GameMenu) >>> shootingScene
 
-systemInput :: Wire TimeState () Identity (Event GameInput) (Event GameInput)
+systemInput :: SF (Event GameInput) (Event GameInput)
 systemInput = proc input -> do
   popEnemyEvent <- periodic 1 -< PopEnemy EnemySimple (-10,20) (0, -10)
   returnA -< mergeL input popEnemyEvent
 
-shootingScene :: Wire TimeState () Identity GameInput GameOutput
+shootingScene :: SF GameInput GameOutput
 shootingScene = updateGame initialObjectSFs
 
 initialObjectSFs :: ObjectSF

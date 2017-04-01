@@ -20,7 +20,7 @@ main = do
     idleCallback $= Just (idle window newInput clockSession_ mainSF)
     mainLoop
 
-idle :: Window -> IORef (Event Input) -> Session IO TimeState -> Wire TimeState () Identity (Event Input) GameOutput -> IO ()
+idle :: Window -> IORef (Event Input) -> Session IO TimeState -> SF (Event Input) GameOutput -> IO ()
 idle window newInput session wire = do
   (dt, session') <- stepSession session 
   newInput' <- get newInput
