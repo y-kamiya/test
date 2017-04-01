@@ -13,8 +13,11 @@ data GameInput = MoveUp
                | MoveLeft 
                | Shot 
                | GameMenu
-               | PopEnemy
+               | PopEnemy EnemyKind Pos Vel
                | NoInput
+               deriving (Eq, Show)
+
+data EnemyKind = EnemySimple
                deriving (Eq, Show)
 
 data ObjectKind = KindPlayer

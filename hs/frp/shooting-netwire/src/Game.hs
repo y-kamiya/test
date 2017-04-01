@@ -53,7 +53,7 @@ updateGame sf = dkSwitch sf nextWire
         isCreatedOrDeleted = foldl (\acc o -> acc || judge (i,o)) False os
 
         judge (Shot, _) = True
-        judge (PopEnemy, _) = True
+        judge (PopEnemy _ _ _, _) = True
         judge (_, GameObject KindShot pos _) | isOut pos = True
         judge (_, GameObject KindEnemy pos _) | isOut pos = True
         judge _ = False
@@ -68,7 +68,7 @@ updateGame sf = dkSwitch sf nextWire
         createSFs (_, GameObject KindShot pos vel) _  = [shot pos vel]
 
     addNewObjects :: GameInput -> GameOutput
-    addNewObjects PopEnemy = [GameObject KindEnemy (0,20) (0,-10)]
+    addNewObjects (PopEnemy _ pos vel) = [GameObject KindEnemy pos vel]
     addNewObjects _ = []
 
     updateByOut :: GameOutput -> GameOutput
@@ -100,7 +100,7 @@ mainSF = parseInput >>> systemInput >>> arr getInput >>> unless (==GameMenu) >>>
 
 systemInput :: Wire TimeState () Identity (Event GameInput) (Event GameInput)
 systemInput = proc input -> do
-  popEnemyEvent <- periodic 1 -< PopEnemy
+  popEnemyEvent <- periodic 1 -< PopEnemy EnemySimple (-10,20) (0, -10)
   returnA -< mergeL input popEnemyEvent
 
 shootingScene :: Wire TimeState () Identity GameInput GameOutput
