@@ -25,14 +25,16 @@ movingPlayer pos = proc input -> do
   returnA -< createOutput pos' vel' input
   where 
     makeVelocity :: GameInput -> Vel
-    makeVelocity MoveUp    = (0,10)
-    makeVelocity MoveRight = (10,0)
-    makeVelocity MoveDown  = (0,-10)
-    makeVelocity MoveLeft  = (-10,0)
+    makeVelocity (MoveUp:_)    = (0,10)
+    makeVelocity (MoveRight:_) = (10,0)
+    makeVelocity (MoveDown:_)  = (0,-10)
+    makeVelocity (MoveLeft:_)  = (-10,0)
+    makeVelocity (PopEnemy{}:rest) = makeVelocity rest
     makeVelocity _ = (0,0)
 
     createOutput :: Pos -> Vel -> GameInput -> GameOutput
-    createOutput pos vel Shot = [GameObject KindPlayer pos vel, GameObject KindShot pos (0,10)]
+    createOutput pos vel (Shot:_) = [GameObject KindPlayer pos vel, GameObject KindShot pos (0,10)]
+    createOutput pos vel (_:rest) | not $ null rest = [GameObject KindPlayer pos vel]
     createOutput pos vel _ = [GameObject KindPlayer pos vel]
 
 shot :: Pos -> Vel -> ObjectSF
@@ -47,10 +49,10 @@ updateGame sf = dkSwitch sf nextWire
       returnA -< updateSF <$> event
 
     shouldSwitch :: (GameInput,GameOutput) -> Bool
-    shouldSwitch (i, os) =  isCollide || isCreatedOrDeleted
+    shouldSwitch (is, os) =  isCollide || any isCreatedOrDeleted is
       where
         isCollide = foldl (\acc o -> acc || collide os o) False os
-        isCreatedOrDeleted = foldl (\acc o -> acc || judge (i,o)) False os
+        isCreatedOrDeleted i = foldl (\acc o -> acc || judge (i,o)) False os
 
         judge (Shot, _) = True
         judge (PopEnemy _ _ _, _) = True
@@ -59,15 +61,15 @@ updateGame sf = dkSwitch sf nextWire
         judge _ = False
 
     updateSF :: (GameInput,GameOutput) -> ObjectSF -> ObjectSF
-    updateSF (i, os) sf 
+    updateSF (is, os) sf 
       | isNothing (find ((== KindPlayer) . objKind) os) = inhibit ()
-      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs (i, o) sf) [] $ addNewObjects i ++ (updateByOut $ updateByCollide os)
+      | otherwise = updateGame $ mconcat $ foldl (\acc o -> acc ++ createSFs o) [] $ concatMap addNewObjects is ++ updateByOut (updateByCollide os)
       where
-        createSFs (_, GameObject KindEnemy pos vel) _ = [simpleEnemy pos vel]
-        createSFs (_, GameObject KindPlayer pos _) _  = [movingPlayer pos]
-        createSFs (_, GameObject KindShot pos vel) _  = [shot pos vel]
+        createSFs (GameObject KindEnemy pos vel) = [simpleEnemy pos vel]
+        createSFs (GameObject KindPlayer pos _)  = [movingPlayer pos]
+        createSFs (GameObject KindShot pos vel)  = [shot pos vel]
 
-    addNewObjects :: GameInput -> GameOutput
+    addNewObjects :: GameEvent -> GameOutput
     addNewObjects (PopEnemy _ pos vel) = [GameObject KindEnemy pos vel]
     addNewObjects _ = []
 
@@ -96,12 +98,7 @@ updateGame sf = dkSwitch sf nextWire
       where d = sqrt $ ((x2-x1)^2) + ((y2-y1)^2)
 
 mainSF :: SF (Event Input) GameOutput
-mainSF = parseInput >>> systemInput >>> arr getInput >>> unless (==GameMenu) >>> shootingScene
-
-systemInput :: SF (Event GameInput) (Event GameInput)
-systemInput = proc input -> do
-  popEnemyEvent <- periodic 1 -< PopEnemy EnemySimple (-10,20) (0, -10)
-  returnA -< mergeL input popEnemyEvent
+mainSF = parseInput >>> systemInput >>> unless (notElem GameMenu) >>> shootingScene
 
 shootingScene :: SF GameInput GameOutput
 shootingScene = updateGame initialObjectSFs

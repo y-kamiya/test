@@ -9,7 +9,7 @@ type R = GLdouble
 
 type SF a b = Wire TimeState () Identity a b
 
-data GameInput = MoveUp 
+data GameEvent = MoveUp 
                | MoveRight 
                | MoveDown 
                | MoveLeft 
@@ -18,6 +18,8 @@ data GameInput = MoveUp
                | PopEnemy EnemyKind Pos Vel
                | NoInput
                deriving (Eq, Show)
+
+type GameInput = [GameEvent] 
 
 data EnemyKind = EnemySimple
                deriving (Eq, Show)
