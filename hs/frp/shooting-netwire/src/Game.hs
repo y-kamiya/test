@@ -98,7 +98,7 @@ updateGame sf = dkSwitch sf nextWire
       where d = sqrt $ ((x2-x1)^2) + ((y2-y1)^2)
 
 mainSF :: SF (Event Input) GameOutput
-mainSF = parseInput >>> systemInput >>> unless (notElem GameMenu) >>> shootingScene
+mainSF = parseInput >>> systemInput >>> unless (elem GameMenu) >>> shootingScene
 
 shootingScene :: SF GameInput GameOutput
 shootingScene = updateGame initialObjectSFs

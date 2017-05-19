@@ -43,4 +43,3 @@ systemInput :: SF (Event GameEvent) GameInput
 systemInput = proc input -> do
   popEnemyEvent <- periodic 1 -< PopEnemy EnemySimple (-10,20) (0, -10)
   returnA -< filter (/= NoInput) $ map getInput [input, popEnemyEvent]
-  -- returnA -< mergeL input popEnemyEvent
