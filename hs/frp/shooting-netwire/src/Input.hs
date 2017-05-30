@@ -8,6 +8,7 @@ module Input ( parseInput
 import Prelude hiding ((.))
 import Control.Wire
 import Control.Wire.Unsafe.Event
+import Control.Monad.Reader
 import Graphics.UI.GLUT
 
 import Types
@@ -40,6 +41,12 @@ getInput (Event a) = a
 getInput noEvent = NoInput
 
 systemInput :: SF (Event GameEvent) GameInput
-systemInput = proc input -> do
-  popEnemyEvent <- periodic 1 -< PopEnemy EnemySimple (-10,20) (0, -10)
-  returnA -< filter (/= NoInput) $ map getInput [input, popEnemyEvent]
+systemInput = mkId &&& (createEnemyEvent >>> periodic 1)
+              >>> mkSF_ (\(input, popEnemy) -> filter (/= NoInput) $ map getInput [input, popEnemy])
+  where
+    createEnemyEvent = mkGen_ $ \input -> do
+                          (x:_) <- ask
+                          return $ Right $ PopEnemy EnemySimple (x,20) (0, -10)
+  -- proc input -> do
+  -- popEnemyEvent <- periodic 1 -< PopEnemy EnemySimple (-10,20) (0, -10)
+  -- returnA -< filter (/= NoInput) $ map getInput [input, popEnemyEvent]

@@ -2,12 +2,13 @@ module Types where
 
 import Graphics.UI.GLUT hiding (Level,normalize)
 import Control.Wire
+import Control.Monad.Reader
 
 type Pos = (Double, Double)
 type Vel = (Double, Double)
 type R = GLdouble
 
-type SF a b = Wire TimeState () Identity a b
+type SF a b = Wire TimeState () (Reader [Double]) a b
 
 data GameEvent = MoveUp 
                | MoveRight 
