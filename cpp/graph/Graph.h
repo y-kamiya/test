@@ -1,5 +1,13 @@
 #pragma once
 
+#include <vector>
+#include <queue>
+#include <functional>
+#include <cfloat>
+
+#include "GraphVertex.h"
+#include "GraphEdge.h"
+
 template<class VERTEX, class EDGE>
 class Graph {
     public:
@@ -16,9 +24,9 @@ class Graph {
             return _edges[index];
         }
 
-        void addVertex(VERTEX *vert);
-        bool createEdge(VERTEX *pTail, VERTEX *pHead, bool isTwoWay = true);
-        float computeBestPath(VERTEX *pStart, VERTEX pGoal,
+        void addVertex(VERTEX *pVert);
+        void createEdge(VERTEX *pTail, VERTEX *pHead, float cost, bool isTwoWay = true);
+        float computeBestPath(VERTEX *pStart, VERTEX *pGoal,
                 std::function<float(EDGE *)>, std::vector<VERTEX *> &path);
 
     protected:
@@ -30,8 +38,8 @@ class Graph {
 
 template<class VERTEX, class EDGE>
 Graph<VERTEX, EDGE>::~Graph() {
-    for (auto vert : _verts) {
-        delete(vert);
+    for (auto pVert : _verts) {
+        delete(pVert);
     }
     for (auto pEdge : _edges) {
         delete(pEdge);
@@ -41,20 +49,20 @@ Graph<VERTEX, EDGE>::~Graph() {
 }
 
 template<class VERTEX, class EDGE>
-void Graph<VERTEX, EDGE>::addVertex(VERTEX *vert) {
-    vert->setIndex(static_cast<int>(_verts.size()));
-    _verts.push_back(vert);
+void Graph<VERTEX, EDGE>::addVertex(VERTEX *pVert) {
+    pVert->setIndex(static_cast<int>(_verts.size()));
+    _verts.push_back(pVert);
 }
 
 template<class VERTEX, class EDGE>
-void Graph<VERTEX, EDGE>::createEdge(VERTEX *pTail, VERTEX *pHead, bool isTwoWay) {
-    EDGE *pEdge = new EDGE;
+void Graph<VERTEX, EDGE>::createEdge(VERTEX *pTail, VERTEX *pHead, float cost, bool isTwoWay) {
+    EDGE *pEdge = new EDGE(cost);
     pEdge->setTail(pTail);
     pEdge->setHead(pHead);
     pTail->addEdge(pEdge);
 
     if (isTwoWay) {
-        EDGE *pEdge2 = new EDGE;
+        EDGE *pEdge2 = new EDGE(cost);
         pEdge2->setTail(pHead);
         pEdge2->setHead(pTail);
         pHead->addEdge(pEdge2);
@@ -63,18 +71,18 @@ void Graph<VERTEX, EDGE>::createEdge(VERTEX *pTail, VERTEX *pHead, bool isTwoWay
 
 template<class VERTEX, class EDGE>
 void Graph<VERTEX, EDGE>::InitializePathSearch() {
-    for (auto vert : _verts) {
-        setPathSearchCost(FLT_MAX);
-        setPredecessor(nullptr);
+    for (auto pVert : _verts) {
+        pVert->setPathSearchCost(FLT_MAX);
+        pVert->setPredecessor(nullptr);
     }
 }
 
 template<class VERTEX, class EDGE>
-float computeBestPath(VERTEX *pStart, VERTEX pGoal,
+float Graph<VERTEX, EDGE>::computeBestPath(VERTEX *pStart, VERTEX *pGoal,
         std::function<float(EDGE *)> costFunc, std::vector<VERTEX *> &path) {
 
     InitializePathSearch();
-    priority_queue<VERTEX *, std::vector<VERTEX *>, GraphVertexSearchCostComparer> fringe;
+    std::priority_queue<VERTEX *, std::vector<VERTEX *>, GraphVertexSearchCostComparer> fringe;
 
     pStart->setPathSearchCost(0.0f);
     VERTEX *pCurrentVertex = pStart;
@@ -100,7 +108,7 @@ float computeBestPath(VERTEX *pStart, VERTEX pGoal,
                 if (pNeighbor == pGoal) {
                     totalCostToGoal = newCostToThisVertex;
                 }
-                fringe.push_back(pNeighbor);
+                fringe.push(pNeighbor);
             }
         }
 

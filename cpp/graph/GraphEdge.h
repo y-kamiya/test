@@ -1,13 +1,19 @@
 #pragma once
 
+class GraphVertex;
+
 class GraphEdge {
     public:
-        GraphEdge();
-        virtual ~GraphEdge();
-        GrahpVertex *getTail() const {
+        GraphEdge(float cost) {
+            _baseCost = cost;
+        }
+        virtual ~GraphEdge() {
+        }
+
+        GraphVertex *getTail() const {
             return _pTail;
         }
-        GrahpVertex *getHead() const {
+        GraphVertex *getHead() const {
             return _pHead;
         }
         void setTail(GraphVertex *pVert) {

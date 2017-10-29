@@ -1,26 +1,56 @@
 #pragma once
 
+#include <vector>
+#include <functional>
+
+class GraphEdge;
+
 class GraphVertex {
     public:
-        GraphVertex();
-        virtual ~GraphVertex();
+        GraphVertex() {
+        }
+        virtual ~GraphVertex() {
+        }
 
-        void AddEdge(GraphEdge *pEdge);
-        std::vector<GraphEdge *> &getEdges();
-        int getIndex() const;
-        void setIndex(int index);
+        void addEdge(GraphEdge *pEdge) {
+            _edges.push_back(pEdge);
+        }
+        std::vector<GraphEdge *> &getEdges() {
+            return _edges;
+        }
 
-        void setPathSearchCost(float cost);
-        flaot getPathSearchCost() const;
+        int getIndex() const {
+            return _index;
+        }
+        void setIndex(int index) {
+            _index = index;
+        }
 
-        void setPredecessor(GraphVertex *pPred);
-        GraphVertex *getPredecessor() const;
+        void setPathSearchCost(float cost) { 
+            _pathSearchCost = cost;
+        }
+        float getPathSearchCost() const {
+            return _pathSearchCost;
+        }
+
+        void setPredecessor(GraphVertex *pPred) {
+            _pPredecessor = pPred;
+        }
+        GraphVertex *getPredecessor() const {
+            return _pPredecessor;
+        }
 
     protected:
         std::vector<GraphEdge *> _edges;
-        int index;
+        int _index;
 
-        float pathSearchCost;
-        GraphVertex *pPredecessor;
+        float _pathSearchCost;
+        GraphVertex *_pPredecessor;
 };
 
+class GraphVertexSearchCostComparer {
+    public:
+        bool operator()(const GraphVertex *v1, const GraphVertex *v2) const {
+            return v1->getPathSearchCost() > v2->getPathSearchCost();
+        }
+};
