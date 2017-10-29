@@ -5,9 +5,22 @@ class GraphVertex {
         GraphVertex();
         virtual ~GraphVertex();
 
-        void AddEdge(GraphVertex *pNeighbor);
+        void AddEdge(GraphEdge *pEdge);
+        std::vector<GraphEdge *> &getEdges();
+        int getIndex() const;
+        void setIndex(int index);
+
+        void setPathSearchCost(float cost);
+        flaot getPathSearchCost() const;
+
+        void setPredecessor(GraphVertex *pPred);
+        GraphVertex *getPredecessor() const;
 
     protected:
-        std::vector<GraphVertex *> _neighbors;
+        std::vector<GraphEdge *> _edges;
+        int index;
+
+        float pathSearchCost;
+        GraphVertex *pPredecessor;
 };
 
