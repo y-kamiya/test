@@ -1,8 +1,11 @@
 module Main where
 
 import System.Random
+import System.Environment
+import System.Console.GetOpt
 import Data.List
 import Data.Ord
+import Data.Maybe
 import Control.Monad
 import Text.Printf
 
@@ -10,19 +13,19 @@ type Individual = [Bool]
                 
 type Population = [Individual]
 
-evolve :: Int -> Population -> IO Population
-evolve 0 population = return population
-evolve generation population
+evolve :: Int -> Int -> Population -> IO Population
+evolve 0 _ population = return population
+evolve generation crossRate population
   | reachMaxFitness population = return population
   | otherwise = do
       printf "generation: %d highest: %d\n" generation (highestFitness population)
       gen0 <- getStdGen
-      next <- createNextGeneration population gen0
+      next <- createNextGeneration population gen0 crossRate
       -- outputPopulation next
 
       gen1 <- getStdGen
       let selected = select 20 (population ++ next) gen1
-      evolve (generation - 1) selected
+      evolve (generation - 1) crossRate selected
 
   where
     reachMaxFitness :: Population -> Bool
@@ -48,14 +51,14 @@ findElite population = population !! maxIndex
 highestFitness :: Population -> Int
 highestFitness population = fitness $ findElite population
 
-createNextGeneration :: Population -> StdGen -> IO Population
-createNextGeneration population gen = do
+createNextGeneration :: Population -> StdGen -> Int -> IO Population
+createNextGeneration population gen crossRate = do
   let seeds = take 20 $ randomRs (1, 100) gen
   return $ foldl (createChild population) [] $ map mkStdGen seeds
   where
     createChild :: Population -> Population -> StdGen -> Population
     createChild population acc gen = let (ratio, gen') = randomRatio gen
-                                         child = if ratio < 95 then cross population gen' else mutate population gen'
+                                         child = if ratio < crossRate then cross population gen' else mutate population gen'
                                      in child:acc
     randomRatio :: StdGen -> (Int, StdGen)
     randomRatio = randomR (1, 100)
@@ -103,11 +106,50 @@ outputPopulation population = do
     mapM (print . map fromEnum) population
     print "------------------------------"
 
+
+data Options = Options
+  { optDim :: Int
+  , optEpochs :: Int
+  , optIndividuals :: Int
+  , optCrossRate :: Int
+  } deriving Show
+
+defaultOptions = Options
+  { optDim = 10
+  , optEpochs = 20
+  , optIndividuals = 50
+  , optCrossRate = 95
+  }
+
+options :: [OptDescr (Options -> Options)]
+options =
+  [ Option [] ["dim"] (OptArg 
+      ((\f opts -> opts { optDim = f }) . read . fromJust) "int") ""
+  , Option [] ["epochs"] (OptArg
+      ((\f opts -> opts { optEpochs = f }) . read . fromJust) "int") ""
+  , Option [] ["individuals"] (OptArg
+      ((\f opts -> opts { optIndividuals = f }) . read . fromJust) "int") ""
+  , Option [] ["cross_rate"] (OptArg
+      ((\f opts -> opts { optCrossRate = f }) . read . fromJust) "int") ""
+  ]
+  where func = (\f opts -> opts { optDim = f }) . read . fromJust
+
+compileOpts :: [String] -> IO (Options, [String])
+compileOpts args =
+  case getOpt Permute options args of
+    (opts, rest, []) -> return (foldl (flip id) defaultOptions opts, rest)
+    (_, _, errs) -> ioError $ userError $ concat errs ++ usageInfo "Usage: " options
+
 main :: IO ()
 main = do
+    args <- getArgs
+    print args
+    (opts, rest) <- compileOpts args
+    print opts
+
     print "start"
     gen <- getStdGen
-    finalPopulation <- evolve 200 $ createPopulation 10 40 gen
+    finalPopulation <- evolve (optEpochs opts) (optCrossRate opts) $ createPopulation (optDim opts) (optIndividuals opts) gen
     print $ map fitness finalPopulation
     -- outputPopulation finalPopulation
     print "end"
