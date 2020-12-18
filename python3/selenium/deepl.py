@@ -1,4 +1,5 @@
 import os
+import argparse
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
@@ -7,77 +8,81 @@ import urllib.parse
 import chromedriver_binary
 
 
-sleep_time = 1
-try_max_count = 30
-
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36'
 }
 
 
-def get_translated_text(from_lang, to_lang, from_text):
+class Scraper():
+    SLEEP_TIME = 1
+    TRY_MAX_COUNT = 30
+    FAILED_TEXT = '-----'
 
-    # urlencode
-    from_text = urllib.parse.quote(from_text)
+    def __init__(self, config):
+        self.config = config
 
-    #　url作成
-    url = 'https://www.deepl.com/translator#' + from_lang +'/' + to_lang + '/' + from_text
+    def scrape(self):
+        options = Options()
+        options.add_argument('--headless')
 
-    #　ヘッドレスモードでブラウザを起動
-    options = Options()
-    options.add_argument('--headless')
+        driver = webdriver.Chrome(options=options)
 
-    # ブラウザーを起動
-    driver = webdriver.Chrome(options=options)
-    driver.get(url)
-    driver.implicitly_wait(10)  # 見つからないときは、10秒まで待つ
+        inputs = [args.input]
+        if os.path.isfile(args.input):
+            with open(args.input) as f:
+                inputs = [line.strip() for line in f.readlines()]
 
+        with open(self.config.output_path, 'w') as f:
+            for input in inputs:
+                output = scraper.get_translated_text(driver, self.config.src_lang, self.config.tgt_lang, input)
+                f.write(f"{output}\n")
 
-    for i in range(try_max_count):
+        driver.quit()
 
-        # 指定時間待つ
-        time.sleep(sleep_time)  
-        html = driver.page_source
-        to_text = get_text_from_page_source(html)
+    def get_translated_text(self, driver, src_lang, tgt_lang, input_text):
+        print(input_text)
 
-        try_count = i + 1
+        input_text = urllib.parse.quote(input_text)
+        url = 'https://www.deepl.com/translator#' + src_lang +'/' + tgt_lang + '/' + input_text
+        print(url)
 
-        if to_text:
-            wait_time =  sleep_time * try_count
-            print(str(wait_time) + "秒")
+        driver.get(url)
+        driver.implicitly_wait(10)
 
-            # アクセス修了
-            break
+        for i in range(1, self.TRY_MAX_COUNT + 1):
+            time.sleep(self.SLEEP_TIME)
+            html = driver.page_source
+            output_text = self.get_text_from_page_source(html)
 
-    # ブラウザ停止
-    driver.quit()
+            if output_text:
+                elapsed_time = self.SLEEP_TIME * i
+                print(f"{output_text}\t{elapsed_time}秒", flush=True)
+                return output_text
 
-    return to_text
+        return self.FAILED_TEXT
 
+    def get_text_from_page_source(self, html):
+        soup = BeautifulSoup(html, features='lxml')
+        target_elem = soup.find(class_="lmt__translations_as_text__text_btn")
+        text = target_elem.text
 
-def get_text_from_page_source(html):
-    soup = BeautifulSoup(html, features='lxml')
-    target_elem = soup.find(class_="lmt__translations_as_text__text_btn")
-    text = target_elem.text
+        return text
 
-    return text
+    def get_from_text(self):
+        f = open('./data/input.txt')
+        data = f.read()
 
-
-def get_from_text():
-    f = open('./data/translate.txt')
-    data = f.read()
-
-    return data
+        return data
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument('input')
+    parser.add_argument('--output_path', default='data/result.txt')
+    parser.add_argument('--src_lang', default='ja')
+    parser.add_argument('--tgt_lang', default='en')
+    args = parser.parse_args()
+    print(args)
 
-    from_lang = 'ja'
-    to_lang = 'en'
-    from_text = '明日は晴れです'
-    # from_text = get_from_text()
-
-    # 翻訳
-    to_text = get_translated_text(from_lang, to_lang, from_text)
-
-    print(to_text)
+    scraper = Scraper(args)
+    scraper.scrape()
