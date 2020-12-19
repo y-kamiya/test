@@ -17,8 +17,6 @@ class Scraper():
     SLEEP_TIME = 1
     TRY_MAX_COUNT = 30
     FAILED_TEXT = '-----'
-    SLEEP_SECONDS = 1800
-    COUNT_PER_EPOCH = 1800
 
     def __init__(self, config):
         self.config = config
@@ -34,16 +32,10 @@ class Scraper():
             with open(args.input) as f:
                 inputs = [line.strip() for line in f.readlines()]
 
-        count = 0
         with open(self.config.output_path, 'w') as f:
             for input in inputs:
-                if self.COUNT_PER_EPOCH < count:
-                    count = 0
-                    time.sleep(self.SLEEP_SECONDS)
-
                 output = scraper.get_translated_text(driver, self.config.src_lang, self.config.tgt_lang, input)
                 f.write(f"{output}\n")
-                count += 1
 
         driver.quit()
 
