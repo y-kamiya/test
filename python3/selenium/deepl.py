@@ -14,8 +14,8 @@ headers = {
 
 
 class Scraper():
-    SLEEP_TIME = 1
-    TRY_MAX_COUNT = 30
+    RESULT_POLLING_INTERVAL = 0.5
+    TRY_MAX_COUNT = 60
     FAILED_TEXT = '-----'
 
     def __init__(self, config):
@@ -34,29 +34,31 @@ class Scraper():
 
         with open(self.config.output_path, 'w') as f:
             for input in inputs:
+                start_time = time.time()
+                print(input)
+
                 output = scraper.get_translated_text(driver, self.config.src_lang, self.config.tgt_lang, input)
+
+                elapsed_time = start_time - time.time()
+                print(f"{output}\t{elapsed_time:.2f}", flush=True)
                 f.write(f"{output}\n")
 
         driver.quit()
 
     def get_translated_text(self, driver, src_lang, tgt_lang, input_text):
-        print(input_text)
-
         input_text = urllib.parse.quote(input_text)
-        url = 'https://www.deepl.com/translator#' + src_lang +'/' + tgt_lang + '/' + input_text
+        url = '\thttps://www.deepl.com/translator#' + src_lang +'/' + tgt_lang + '/' + input_text
         print(url)
 
         driver.get(url)
         driver.implicitly_wait(10)
 
         for i in range(1, self.TRY_MAX_COUNT + 1):
-            time.sleep(self.SLEEP_TIME)
+            time.sleep(self.RESULT_POLLING_INTERVAL)
             html = driver.page_source
             output_text = self.get_text_from_page_source(html)
 
             if output_text:
-                elapsed_time = self.SLEEP_TIME * i
-                print(f"{output_text}\t{elapsed_time}秒", flush=True)
                 return output_text
 
         return self.FAILED_TEXT
