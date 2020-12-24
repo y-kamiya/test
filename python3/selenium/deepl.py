@@ -1,3 +1,4 @@
+import sys
 import os
 import argparse
 from selenium import webdriver
@@ -6,6 +7,7 @@ from bs4 import BeautifulSoup
 import time
 import urllib.parse
 import chromedriver_binary
+import random
 
 
 headers = {
@@ -38,10 +40,23 @@ class Scraper():
                 print(input)
 
                 output = scraper.get_translated_text(driver, self.config.src_lang, self.config.tgt_lang, input)
+                if output == self.FAILED_TEXT:
+                    count = 0
+                    while True:
+                        count += 1
+                        time.sleep(300)
+                        output = scraper.get_translated_text(driver, self.config.src_lang, self.config.tgt_lang, input)
+                        if output != self.FAILED_TEXT:
+                            break
 
-                elapsed_time = start_time - time.time()
-                print(f"{output}\t{elapsed_time:.2f}", flush=True)
+                        print(f"{time.asctime()}\t[{count}] failed with input: {input}", flush=True)
+
+                elapsed_time = time.time() - start_time
+                print(f"{time.asctime()}\t{output}\t{elapsed_time:.2f}", flush=True)
                 f.write(f"{output}\n")
+
+                # rand = max(0, random.gauss(2, 1))
+                # time.sleep(rand)
 
         driver.quit()
 
