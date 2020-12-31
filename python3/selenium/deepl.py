@@ -96,8 +96,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument('input')
     parser.add_argument('--output_path', default='data/result.txt')
-    parser.add_argument('--src_lang', default='ja')
-    parser.add_argument('--tgt_lang', default='en')
+    parser.add_argument('--src_lang', default='en')
+    parser.add_argument('--tgt_lang', default='ja')
     args = parser.parse_args()
     print(args)
 
