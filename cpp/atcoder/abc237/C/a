@@ -1,0 +1,4 @@
+    string r = s;
+    std::reverse(ALL(r));
+    return s == r;
+
