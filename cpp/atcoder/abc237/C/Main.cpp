@@ -35,24 +35,32 @@ void _main() {
 
     int ns = (int)S.size();
 
-    string s = S;
-    while (s[0] == 'a') {
-        s.erase(s.begin());
-        --ns;
+    int x = 0;
+    REP(i, ns) {
+        if (S[i] == 'a') ++x;
+        else break;
     }
     
-    while (s[ns-1] == 'a') {
-        s.erase(--s.end());
-        --ns;
+    int y = 0;
+    REP(i, ns) {
+        if (S[ns-1-i] == 'a') ++y;
+        else break;
     }
 
-    Yes(isOk(s));
+    if (x > y) {
+        cout << "No" << endl;
+        return;
+    }
+
+    S.insert(0, y-x, 'a');
+
+    Yes(isOk(S));
 }
 
 int main() {
     _main();
-    // _main();
-    // _main();
+    _main();
+    _main();
     return 0;
 }
 
