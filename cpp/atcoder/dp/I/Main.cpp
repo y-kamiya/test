@@ -13,7 +13,6 @@ using ll = long long;
 #define Yes(n) cout << ((n) ? "Yes" : "No"  ) << endl
 
 
-
 int N;
 
 void _main() {
@@ -26,11 +25,14 @@ void _main() {
     double dp[N+1][N+1]; // i番目のコインまで投げたとき、j枚表が出る確率
     memset(dp, 0, sizeof(dp));
     dp[0][0] = 1;
-    dp[1][0] = 1-p[0];
+    dp[1][0] = 1-p[1];
 
-    FOR(i, 0, N+1) {
-        FOR(j, 0, i) {
+    FOR(i, 0, N) {
+        dp[i+1][0] = dp[i][0] * (1 - p[i+1]);
+        // cout << i+1 << "," << 0 << "  " << dp[i+1][0] << endl;
+        FOR(j, 0, i+1) {
             dp[i+1][j+1] = dp[i][j] * p[i+1] + dp[i][j+1] * (1 - p[i+1]);
+            // cout << i+1 << "," << j+1 << "  " << dp[i+1][j+1] << endl;
         }
     }
 
@@ -39,11 +41,16 @@ void _main() {
         ans += dp[N][i];
     }
 
-    cout << ans << endl;
+    cout << std::fixed << std::setprecision(9) << ans << endl;
 }
 
 int main() {
     _main();
+    _main();
+    _main();
     return 0;
 }
 
+// 解法を見てdpの定義の形を知ってから実装
+// dp[i+1][0]の計算をしていなくて結果が合わなかった
+// 桁数の9桁の指定も必須
