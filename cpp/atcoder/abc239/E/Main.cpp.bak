@@ -1,0 +1,157 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+using ll = long long;
+
+#define REP(i,n) for(int i=0, i##_len=(n); i<i##_len; ++i)
+#define REPR(i,n) for(int i=n;i>=0;i--)
+#define FOR(i,a,b) for(int i=(a);i<(b);++i)
+#define FORR(i,a,b) for(int i=(a);i>=(b);--i)
+#define ALL(x) (x).begin(),(x).end()
+#define UNIQUE(v) v.erase( unique(v.begin(), v.end()), v.end() );
+#define YES(n) cout << ((n) ? "YES" : "NO"  ) << endl
+#define Yes(n) cout << ((n) ? "Yes" : "No"  ) << endl
+#define PRINT_DOUBLE(n, x) cout << std::fixed << std::setprecision(n) << x << endl;
+
+int N,Q;
+static const int MAX = 200005;
+using Graph = vector<vector<int>>;
+vector<vector<int>> top(MAX, vector<int>());
+Graph graph(MAX, vector<int>());
+int X[MAX];
+
+vector<int> node_list(int index, const Graph &graph) {
+    vector<int> result;
+    result.push_back(index);
+
+    if (graph[index].empty()) {
+        return {index};
+    }
+
+    for (auto i : graph[index]) {
+        auto vec = node_list(i, graph);
+        result.insert(result.end(), vec.begin(), vec.end());
+    }
+
+    return result;
+}
+
+// void dfs_test(int n) {
+// 	top[n].push_back(X[n]);
+//     cout << "sssssssssssssssss " << n << endl;
+// 	for (int i : graph[n]) {
+// 		dfs_test(i);
+// 		for (int j : top[i]) top[n].push_back(j);
+// 	}
+// 	sort(ALL(top[n]), greater<>());
+// 	top[n].resize(20);
+// }
+
+int counter = 0;
+void dfs(int index, int p) {
+    if (!top[index].empty()) {
+        return;
+    }
+
+    ++counter;
+    // cout << "aaaaaaaaaaa " << index << endl;
+    top[index].push_back(X[index]);
+
+    // cout << index << ": ";
+    // auto size = graph[index].size();
+    // REP(i, size) cout << graph[index][i] << ", ";
+    // cout << endl;
+
+    if (graph[index].empty()) {
+        return;
+    }
+
+    for (auto i : graph[index]) {
+        // if (i == p) continue;
+        dfs(i, index);
+        top[index].insert(top[index].end(), top[i].begin(), top[i].end());
+        // for (auto v : top[i]) top[index].push_back(v);
+    }
+    sort(ALL(top[index]), greater<int>());
+
+    top[index].resize(20);
+}
+
+// vector<int> test(int i, const Graph &graph) {
+// void test(int i, const Graph &graph) {
+//     if (i == 200000) {
+//         cout << "test " << i << endl;
+//         return;
+//         // return {i};
+//     }
+//     cout << i << endl;
+//     test(i+1, graph);
+//
+//     // auto vec = test(i+1, graph);
+//     // vec.push_back(i);
+//     //
+//     // return vec;
+// }
+
+void _main() {
+    cin >> N >> Q;
+
+    // int X[N+1];
+    FOR(i, 1, N+1) cin >> X[i];
+
+    // Graph graph;
+    // graph.resize(N+1);
+    int A, B;
+    REP(i, N-1) {
+        cin >> A >> B;
+        // graph[A].push_back(B);
+        // graph[B].push_back(A);
+        if (A < B) graph[A].push_back(B);
+        else graph[B].push_back(A);
+        // cout << A << ", " << B << endl;
+    }
+
+    // test(0, graph);
+    // cout << a[0] << endl;
+
+    // cout << "dddddddddddd " << endl;
+    // auto nodes = node_list(1, graph);
+    // cout << "eeeeeeeeeeeeee " << endl;
+
+    // for (auto i : nodes) {
+    //     cout << i << " ";
+    // }
+    // cout << endl;
+    
+    // vector<vector<int>> top;
+    // top.resize(N+1, {});
+
+    dfs(1, -1);
+    cout << ";;;;;;;;;;;;;;;;;;;;; " << counter << endl;
+    // reverse(ALL(nodes));
+    // for (auto i : nodes) {
+        // dfs(i, graph, X, top);
+    // }
+
+    // FOR(i, 1, N+1) {
+    //     auto size = top[i].size();
+    //     cout << i << ": ";
+    //     REP(j, size) cout << top[i][j] << ", ";
+    //     cout << endl;
+    // }
+
+    int V, K;
+    REP(i, Q) {
+        cin >> V >> K;
+        cout << top[V][K-1] << endl;
+    }
+}
+
+int main() {
+    _main();
+    return 0;
+}
+
+// RE 23:08
+//
+

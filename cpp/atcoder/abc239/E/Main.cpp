@@ -16,9 +16,13 @@ using ll = long long;
 int N,Q;
 using Graph = vector<vector<int>>;
 
-vector<int> dfs(int index, const Graph &graph, int X[], Graph &top) {
-    vector<int> result;
-    result.push_back(X[index]);
+static const int MAX = 100005;
+vector<vector<int>> top(MAX, vector<int>());
+int X[MAX];
+Graph graph(MAX, vector<int>());
+
+void dfs(int index, int p) {
+    top[index].push_back(X[index]);
 
     // cout << index << ": ";
     // auto size = graph[index].size();
@@ -26,44 +30,39 @@ vector<int> dfs(int index, const Graph &graph, int X[], Graph &top) {
     // cout << endl;
 
     if (graph[index].empty()) {
-        top[index] = result;
-        return top[index];
+        return;
     }
 
     for (auto i : graph[index]) {
-        auto vec = dfs(i, graph, X, top);
-        if (vec.size() > 20) {
-            result.insert(result.end(), vec.begin(), vec.begin() + 20);
-        } else {
-            result.insert(result.end(), vec.begin(), vec.end());
-        }
+        if (i == p) continue;
+        dfs(i, index);
+        // top[index].insert(top[index].end(), top[i].begin(), top[i].end());
+        for (auto v : top[i]) top[index].push_back(v);
     }
-    sort(ALL(result), greater<int>());
+    sort(ALL(top[index]), greater<int>());
 
-    top[index].insert(top[index].begin(), result.begin(), result.begin() + min((int)result.size(), 20));
-    return top[index];
+    top[index].resize(20);
 }
 
 void _main() {
     cin >> N >> Q;
 
-    int X[N+1];
     FOR(i, 1, N+1) cin >> X[i];
 
-    Graph graph;
-    graph.resize(N+1);
     int A, B;
     REP(i, N-1) {
         cin >> A >> B;
-        if (A < B) graph[A].push_back(B);
-        else graph[B].push_back(A);
+        // if (A < B) graph[A].push_back(B);
+        // else graph[B].push_back(A);
+
+        // 両方向にchild nodeを登録する必要があった
+        // indexの小さい方が親という扱いや、A->BのみだとRE
+        graph[A].push_back(B);
+        graph[B].push_back(A);
         // cout << A << ", " << B << endl;
     }
 
-    vector<vector<int>> top;
-    top.resize(N+1, {});
-
-    dfs(1, graph, X, top);
+    dfs(1, -1);
 
     // FOR(i, 1, N+1) {
     //     auto size = top[i].size();
@@ -85,5 +84,6 @@ int main() {
 }
 
 // RE 23:08
-//
+// おそらく入力に自己ノードへの連結があって無限ループによるRE
+// また、ローカルで確保した大きな変数を渡していることによって再帰可能な枠が食いつぶされていた
 
