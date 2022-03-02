@@ -42,6 +42,21 @@ ll calc(int X[][MAX], int Y[][MAX]) {
     return m;
 }
 
+void rotate90(int k, int X[][MAX], int n) {
+    int Y[n][n];
+    REP(i, n) REP(j, n) Y[i][j] = X[i][j];
+
+    REP(i, n) REP(j, n) X[i][j] = Y[n-j-1][i];
+
+    // if (k == 1) {
+    //     REP(i, n) REP(j, n) X[i][j] = Y[n-j-1][i];
+    // } else if (k == 2) {
+    //     REP(i, n) REP(j, n) X[i][j] = Y[n-i-1][n-j-1];
+    // } else if (k == 3) {
+    //     REP(i, n) REP(j, n) X[i][j] = Y[j][n-i-1];
+    // }
+}
+
 void _main() {
     cin >> n;
 
@@ -51,13 +66,17 @@ void _main() {
 
     ll m = 0;
     REP(i, 4) {
-        REP(j, 4) {
-            // Aをi回、Bをj回回転
-            REP(i, n) REP(j, n) X[i][j] = A[i][j];
-            REP(i, n) REP(j, n) Y[i][j] = B[i][j];
-
+        // cout << "-----------------------" << endl;
+        REP(j, 1) {
+            // Aをi回90°回転
+            if (i != 0) rotate90(i, A, n);
+            // REP(i, n) {
+            //     REP(j, n) cout << A[i][j] << ", ";
+            //     cout << endl;
+            // }
+            
             // 各部分長方形の積和計算してmaxを返す
-            m = max(m, calc(X, Y));
+            m = max(m, calc(A, B));
         }
     }
 
@@ -65,6 +84,12 @@ void _main() {
 }
 
 int main() {
+    _main();
+    cout << "-----------------------" << endl;
+    _main();
+    cout << "-----------------------" << endl;
+    _main();
+    cout << "-----------------------" << endl;
     _main();
     return 0;
 }
