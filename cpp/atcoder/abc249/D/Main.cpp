@@ -33,27 +33,21 @@ void _main() {
     vector<ll> A(N);
     REP(i, N) cin >> A[i];
 
-    vector<ll> dp(N, 0LL);
-    if (A[0] == 1) dp[0] = 1;
-    else dp[0] = 0;
-
-    vector<int> count(200005, 0);
-    ++count[A[0]];
-
-    FOR(i, 0, N-1) {
-        dp[i+1] = dp[i];
-        REP(j, i) {
-            ll tgt = A[i] * A[j];
-            if (count[tgt] == 0) continue;
-
-            if (A[i] == 1 && A[j] == 1) dp[i+1] += 3 * count[tgt] * (count[tgt]-1);
-            else dp[i+1] += count[tgt] * 2;
-        }
-        DEBUG(i+1, dp[i+1]);
-        ++count[A[i+1]];
+    int MAX = 200000;
+    vector<ll> count(MAX+1, 0);
+    REP(i, N) {
+        ++count[A[i]];
     }
 
-    cout << dp[N-1] << endl;
+    ll ans = 0;
+    FOR(k, 1, MAX+1) {
+        int m = MAX/k;
+        FOR(j, 1, m+1) {
+            ans += count[k] * count[j] * count[j*k];
+        }
+    }
+
+    cout << ans << endl;
 }
 
 int main() {
