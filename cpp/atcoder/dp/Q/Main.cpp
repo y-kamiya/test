@@ -34,6 +34,46 @@ void print(vector<T> vec, Tail... t) {
 #endif
 
 
+template<typename T>
+class SegmentTree {
+    int n = 1;
+    vector<T> tree;
+
+    T empty = 0;
+    T op(T lhs, T rhs) {
+        return max(lhs, rhs);
+    }
+    void update_leaf(T &leaf, T val) {
+        leaf = val;
+    }
+
+public:
+    SegmentTree(int size) {
+        while (n < size) n <<= 1;
+        tree.resize(2*n-1, empty);
+    }
+
+    void update(int x, T val) {
+        x += (n-1);
+        update_leaf(tree[x], val);
+        while (x > 0) {
+            x = (x-1)/2;
+            tree[x] = op(tree[2*x+1], tree[2*x+2]);
+        }
+    }
+
+    T query(int a, int b, int k=0, int l=0, int r=-1) {
+        if (r < 0) r = n;
+        if (b <= l || r <= a) return empty;
+        if (a <= l && r <= b) return tree[k];
+
+        int mid = (l+r)/2;
+        auto vl = query(a, b, 2*k+1, l, mid);
+        auto vr = query(a, b, 2*k+2, mid, r);
+        return op(vl, vr);
+    }
+};
+
 void _main() {
     int N;
     cin >> N;
@@ -42,23 +82,19 @@ void _main() {
     FOR(i, 1, N+1) cin >> h[i];
     FOR(i, 1, N+1) cin >> a[i];
 
-    vector<vector<ll>> dp(N+1, vector(N+1, 0ll));
-    FOR(i, 0, N) {
-        FOR(j, 1, N+1) {
-            if (dp[i+1][j] < dp[i][j]) dp[i+1][j] = dp[i][j];
-        }
-        FOR(j, 1, h[i+1]+1) {
-            dp[i+1][h[i+1]] = max(dp[i+1][h[i+1]], dp[i][j] + a[i+1]);
-            DEBUG(i+1, j, h[i+1], a[i+1], dp[i+1][h[i+1]]);
-        }
+    SegmentTree<ll> seg(N+1);
+
+    vector<ll> dp(N+1, 0ll);
+    FOR(i, 1, N+1) {
+        dp[h[i]] = seg.query(0, h[i]) + a[i];
+        seg.update(h[i], dp[h[i]]);
+        DEBUG(i, h[i], a[i], dp[h[i]]);
     }
 
-    REP(i, N+1) {
-        DEBUG(dp[i]);
-    }
+    DEBUG(dp);
 
     ll ans = 0;
-    REP(h, N+1) ans = max(ans, dp[N][h]);
+    REP(h, N+1) ans = max(ans, dp[h]);
 
     cout << ans << endl;
 }

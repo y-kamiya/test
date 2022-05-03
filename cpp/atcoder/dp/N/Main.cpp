@@ -40,14 +40,16 @@ void print(vector<T> vec, Tail... t) {
 
 static const ll INF = 1LL<<61;
 
-ll dfs(vector<vector<ll>> &dp, const vector<ll> &a, int l, int r) {
+ll dfs(vector<vector<ll>> &dp, const vector<ll> &a, const vector<ll> &b, int l, int r) {
     if (dp[l][r] != INF) return dp[l][r];
     if (r-l == 0) return 0;
 
-    FOR(i, l, r)
-    ll lvalue = dfs(dp, a, l+1, r) + a[l];
-    ll rvalue = dfs(dp, a, l, r-1) + a[r];
-    return dp[l][r] = min(lvalue, rvalue);
+    ll value = INF;
+    FOR(k, l, r) {
+        value = min(value, dfs(dp, a, b, l, k) + dfs(dp, a, b, k+1, r));
+    }
+    DEBUG(l, r, value);
+    return dp[l][r] = value + b[r+1] - b[l];
 }
 
 void _main() {
@@ -58,10 +60,13 @@ void _main() {
     REP(i, N) cin >> a[i];
 
     vector<vector<ll>> dp(N, vector(N, INF));
-    ll ans = dfs(dp, a, 0, N-1);
+    vector<ll> b(N+1, 0);
+    REP(i, N) b[i+1] = b[i] + a[i];
+    ll ans = dfs(dp, a, b, 0, N-1);
 
     cout << ans << endl;
 
+    // 2つずつペアにして最小となる部分を順次足していく方針だと、考慮から漏れるケースが存在するためダメ
     // vector<ll> b(N-1);
     // ll ans = 0;
     // while (a.size() > 1) {
