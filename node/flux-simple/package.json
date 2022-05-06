@@ -17,6 +17,6 @@
       "browserify": "^9.0.8"
   },
   "dependencies": {
-      "react": "^0.13.1"
+      "react": "^16.13.1"
   }
 }
