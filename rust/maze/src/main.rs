@@ -1,7 +1,7 @@
-use std::fmt;
-use std::collections::{HashMap, HashSet};
-use std::cmp::Reverse;
 use priority_queue::PriorityQueue;
+use std::cmp::Reverse;
+use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 struct Pos {
@@ -59,7 +59,13 @@ impl Field {
                 if node_type == NodeType::Goal {
                     goal = Some(pos);
                 }
-                map.insert(pos, Node { node_type: node_type, pos: pos });
+                map.insert(
+                    pos,
+                    Node {
+                        node_type: node_type,
+                        pos: pos,
+                    },
+                );
             }
         }
         assert!(start.is_some(), "S not found");
@@ -123,7 +129,6 @@ impl fmt::Display for Field {
     }
 }
 
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 struct NodeState {
     parent_pos: Option<Pos>,
@@ -170,7 +175,10 @@ fn main() {
     println!("{}", field);
 
     let mut field_state = FieldState::new();
-    field_state.insert(field.start, NodeState::new(None, 0, field.to_goal(field.start)));
+    field_state.insert(
+        field.start,
+        NodeState::new(None, 0, field.to_goal(field.start)),
+    );
 
     let mut pq = PriorityQueue::new();
     pq.push(field.start, Reverse(field_state[&field.start]));
@@ -182,7 +190,7 @@ fn main() {
         if node.is_none() {
             assert!(false, "node not found on {:?}", pos);
         }
-            
+
         if node.unwrap().node_type == NodeType::Goal {
             println!("goal found");
             break;
@@ -202,11 +210,8 @@ fn main() {
                 continue;
             }
 
-            let node_state = NodeState::new(
-                Some(pos),
-                state.real_cost + 1,
-                field.to_goal(next_pos),
-            );
+            let node_state =
+                NodeState::new(Some(pos), state.real_cost + 1, field.to_goal(next_pos));
             if let Some(s) = field_state.get(&next_pos) {
                 if *s <= node_state {
                     continue;
