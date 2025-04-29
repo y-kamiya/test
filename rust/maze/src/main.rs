@@ -21,6 +21,7 @@ enum NodeType {
     Goal,
     Wall,
     Road,
+    Mark,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -29,7 +30,7 @@ struct Node {
     pos: Pos,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Field {
     field: HashMap<Pos, Node>,
     start: Pos,
@@ -49,8 +50,8 @@ impl Field {
                 let node_type = match c {
                     'S' => NodeType::Start,
                     'G' => NodeType::Goal,
-                    '.' => NodeType::Road,
-                    _ => NodeType::Wall,
+                    '#' => NodeType::Wall,
+                    _ => NodeType::Road,
                 };
                 let pos = Pos::new(x, y);
                 if node_type == NodeType::Start {
@@ -120,6 +121,7 @@ impl fmt::Display for Field {
                     NodeType::Goal => 'G',
                     NodeType::Wall => '#',
                     NodeType::Road => '.',
+                    NodeType::Mark => 'x',
                 };
                 write!(f, "{}", c)?;
             }
@@ -224,17 +226,17 @@ fn main() {
         }
     }
 
-    let mut path = vec![];
+    let mut field_output = field.clone();
     let mut p = field.goal;
     while let Some(s) = field_state.get(&p) {
         println!("{:?}", p);
-        if s.parent_pos.is_none() {
+        let parent_pos = s.parent_pos;
+        if parent_pos.is_none() || parent_pos == Some(field.start) {
             break;
         }
         p = s.parent_pos.unwrap();
-        path.push(p);
+        field_output.field.get_mut(&p).unwrap().node_type = NodeType::Mark;
     }
-    path.push(field.start);
 
-    println!("{:?}", path)
+    println!("{:}", field_output);
 }
