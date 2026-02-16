@@ -3,4 +3,4 @@ chromedriver-binary-auto==0.1
 lxml==4.6.2
 selenium==3.141.0
 soupsieve==2.1
-urllib3==1.26.2
+urllib3==1.26.18
